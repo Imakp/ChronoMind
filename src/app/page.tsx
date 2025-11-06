@@ -1,54 +1,39 @@
-import { auth, signIn, signOut } from "@/auth";
-import { Button } from "@/components/ui/button";
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import Navbar from "@/components/navigation/navbar";
 
 export default async function Home() {
   const session = await auth();
 
   if (!session) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-6">
-          <h1 className="text-4xl font-bold">ChronoMind</h1>
-          <p className="text-lg text-muted-foreground">
-            Your year-based personal journal and knowledge management system
-          </p>
-          <form
-            action={async () => {
-              "use server";
-              await signIn("google");
-            }}
-          >
-            <Button type="submit" size="lg">
-              Sign in with Google
-            </Button>
-          </form>
-        </div>
-      </div>
-    );
+    redirect("/auth/signin");
   }
 
   return (
-    <div className="min-h-screen p-8">
-      <header className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Welcome, {session.user?.name}</h1>
-        <form
-          action={async () => {
-            "use server";
-            await signOut();
-          }}
-        >
-          <Button variant="outline" type="submit">
-            Sign out
-          </Button>
-        </form>
-      </header>
-
-      <main>
-        <div className="text-center space-y-4">
-          <h2 className="text-xl">ChronoMind Dashboard</h2>
-          <p className="text-muted-foreground">
-            Foundation setup complete! Ready for feature implementation.
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          <div className="border-4 border-dashed border-gray-200 rounded-lg h-96 flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                Welcome to Your Year-Based Journal
+              </h1>
+              <p className="text-lg text-gray-600 mb-6">
+                Hello, {session.user?.name || session.user?.email}!
+              </p>
+              <p className="text-gray-500">
+                This is a protected page. You can only see this because you're
+                authenticated.
+              </p>
+              <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  🚧 Dashboard coming soon! This will be where you select years
+                  and access your journal sections.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
