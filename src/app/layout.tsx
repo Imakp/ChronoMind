@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Year-Based Journal",
+  title: "ChronoMind",
   description: "A personal knowledge management application organized by year",
 };
 

@@ -50,6 +50,46 @@ export async function getUserYears(userId: string) {
   }
 }
 
+export async function getYearById(yearId: string, userId: string) {
+  try {
+    const year = await db.year.findFirst({
+      where: {
+        id: yearId,
+        userId,
+      },
+    });
+
+    if (!year) {
+      return { success: false, error: "Year not found" };
+    }
+
+    return { success: true, data: year };
+  } catch (error) {
+    console.error("Error fetching year:", error);
+    return { success: false, error: "Failed to fetch year" };
+  }
+}
+
+export async function getYearByNumber(yearNumber: number, userId: string) {
+  try {
+    const year = await db.year.findFirst({
+      where: {
+        year: yearNumber,
+        userId,
+      },
+    });
+
+    if (!year) {
+      return { success: false, error: "Year not found" };
+    }
+
+    return { success: true, data: year };
+  } catch (error) {
+    console.error("Error fetching year:", error);
+    return { success: false, error: "Failed to fetch year" };
+  }
+}
+
 // Daily Log Actions
 export async function getOrCreateDailyLog(yearId: string, date: Date) {
   try {
