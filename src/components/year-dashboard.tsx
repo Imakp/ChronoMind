@@ -7,6 +7,7 @@ import { QuarterlyReflections } from "@/components/quarterly-reflections";
 import { YearlyGoals } from "@/components/yearly-goals";
 import { BookNotes } from "@/components/book-notes";
 import { LessonsLearned } from "@/components/lessons-learned";
+import { CreativeDump } from "@/components/creative-dump";
 import type { Year } from "@prisma/client";
 
 interface YearDashboardProps {
@@ -136,6 +137,8 @@ export default function YearDashboard({ year, userId }: YearDashboardProps) {
               <BookNotes yearId={year.id} year={year.year} />
             ) : activeSection === "lessons-learned" ? (
               <LessonsLearned yearId={year.id} year={year.year} />
+            ) : activeSection === "creative-dump" ? (
+              <CreativeDump yearId={year.id} year={year.year} />
             ) : (
               <div className="p-6">
                 <div className="text-center py-12">

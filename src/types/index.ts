@@ -68,8 +68,20 @@ export type ContentSource = {
 export type TaggedContent = {
   id: string;
   text: string;
-  source: ContentSource;
+  source: ContentSource | null;
   createdAt: Date;
+  tags: Tag[];
+};
+
+export type TagWithCount = {
+  id: string;
+  name: string;
+  highlightCount: number;
+};
+
+export type TaggedContentGroup = {
+  tag: TagWithCount;
+  content: TaggedContent[];
 };
 
 export type SectionType =
