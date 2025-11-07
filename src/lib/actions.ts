@@ -398,7 +398,20 @@ export async function getGoals(yearId: string) {
       include: {
         tasks: {
           include: {
-            subtasks: true,
+            subtasks: {
+              include: {
+                highlights: {
+                  include: {
+                    tags: true,
+                  },
+                },
+              },
+            },
+            highlights: {
+              include: {
+                tags: true,
+              },
+            },
           },
         },
         highlights: {
@@ -530,6 +543,48 @@ export async function getBookNotes(yearId: string) {
   } catch (error) {
     console.error("Error fetching book notes:", error);
     return { success: false, error: "Failed to fetch book notes" };
+  }
+}
+
+export async function deleteGenre(genreId: string) {
+  try {
+    await db.genre.delete({
+      where: { id: genreId },
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting genre:", error);
+    return { success: false, error: "Failed to delete genre" };
+  }
+}
+
+export async function deleteBook(bookId: string) {
+  try {
+    await db.book.delete({
+      where: { id: bookId },
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting book:", error);
+    return { success: false, error: "Failed to delete book" };
+  }
+}
+
+export async function deleteChapter(chapterId: string) {
+  try {
+    await db.chapter.delete({
+      where: { id: chapterId },
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting chapter:", error);
+    return { success: false, error: "Failed to delete chapter" };
   }
 }
 
@@ -788,6 +843,41 @@ export async function createTag(userId: string, name: string) {
   } catch (error) {
     console.error("Error creating tag:", error);
     return { success: false, error: "Failed to create tag" };
+  }
+}
+
+export async function getOrCreateTags(userId: string, tagNames: string[]) {
+  try {
+    const tags = await Promise.all(
+      tagNames.map(async (name) => {
+        // Try to find existing tag
+        let tag = await db.tag.findUnique({
+          where: {
+            userId_name: {
+              userId,
+              name,
+            },
+          },
+        });
+
+        // Create if doesn't exist
+        if (!tag) {
+          tag = await db.tag.create({
+            data: {
+              name,
+              userId,
+            },
+          });
+        }
+
+        return tag;
+      })
+    );
+
+    return { success: true, data: tags };
+  } catch (error) {
+    console.error("Error getting or creating tags:", error);
+    return { success: false, error: "Failed to get or create tags" };
   }
 }
 

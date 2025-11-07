@@ -120,3 +120,110 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Tiptap Editor Styles */
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+/* Highlight with Tags Styles */
+mark.highlight-with-tags {
+  background-color: #fef08a;
+  padding: 2px 0;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+mark.highlight-with-tags:hover {
+  background-color: #fde047;
+}
+
+.dark mark.highlight-with-tags {
+  background-color: #854d0e;
+  color: #fef3c7;
+}
+
+.dark mark.highlight-with-tags:hover {
+  background-color: #a16207;
+}
+
+/* Tiptap Prose Styles */
+.prose {
+  max-width: 100%;
+}
+
+.prose p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.prose h1,
+.prose h2,
+.prose h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+  font-weight: 600;
+}
+
+.prose h1 {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+.prose h2 {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+.prose h3 {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  padding-left: 1.5em;
+}
+
+.prose ul {
+  list-style-type: disc;
+}
+
+.prose ol {
+  list-style-type: decimal;
+}
+
+.prose li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.prose strong {
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose code {
+  background-color: #f3f4f6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-size: 0.875em;
+}
+
+.dark .prose code {
+  background-color: #374151;
+}

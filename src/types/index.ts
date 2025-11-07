@@ -34,8 +34,12 @@ export type GoalWithRelations = Goal & {
   highlights: Highlight[];
 };
 
+export type SubTaskWithRelations = SubTask & {
+  highlights: Highlight[];
+};
+
 export type TaskWithRelations = Task & {
-  subtasks: SubTask[];
+  subtasks: SubTaskWithRelations[];
   highlights: Highlight[];
 };
 

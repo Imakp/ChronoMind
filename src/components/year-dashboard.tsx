@@ -2,6 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { DailyLogs } from "@/components/daily-logs";
+import { QuarterlyReflections } from "@/components/quarterly-reflections";
+import { YearlyGoals } from "@/components/yearly-goals";
+import { BookNotes } from "@/components/book-notes";
+import { LessonsLearned } from "@/components/lessons-learned";
 import type { Year } from "@prisma/client";
 
 interface YearDashboardProps {
@@ -120,25 +125,39 @@ export default function YearDashboard({ year, userId }: YearDashboardProps) {
             </div>
           </div>
 
-          <div className="p-6">
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🚧</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Section Coming Soon
-              </h3>
-              <p className="text-gray-600 mb-6">
-                This section will be implemented in upcoming tasks. For now, you
-                can navigate between sections to see the structure.
-              </p>
-              <div className="flex justify-center gap-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setActiveSection(null)}
-                >
-                  Back to All Sections
-                </Button>
+          <div className="h-[calc(100vh-250px)]">
+            {activeSection === "daily-logs" ? (
+              <DailyLogs yearId={year.id} year={year.year} />
+            ) : activeSection === "quarterly-reflections" ? (
+              <QuarterlyReflections yearId={year.id} year={year.year} />
+            ) : activeSection === "yearly-goals" ? (
+              <YearlyGoals yearId={year.id} year={year.year} />
+            ) : activeSection === "book-notes" ? (
+              <BookNotes yearId={year.id} year={year.year} />
+            ) : activeSection === "lessons-learned" ? (
+              <LessonsLearned yearId={year.id} year={year.year} />
+            ) : (
+              <div className="p-6">
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">🚧</div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    Section Coming Soon
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    This section will be implemented in upcoming tasks. For now,
+                    you can navigate between sections to see the structure.
+                  </p>
+                  <div className="flex justify-center gap-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => setActiveSection(null)}
+                    >
+                      Back to All Sections
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
