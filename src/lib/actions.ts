@@ -3,6 +3,30 @@
 import { db } from "./db";
 import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
+import {
+  createYearSchema,
+  updateDailyLogSchema,
+  updateQuarterlyReflectionSchema,
+  createGoalSchema,
+  updateGoalSchema,
+  createTaskSchema,
+  updateTaskSchema,
+  createSubTaskSchema,
+  updateSubTaskSchema,
+  createGenreSchema,
+  createBookSchema,
+  createChapterSchema,
+  updateChapterSchema,
+  createLessonSchema,
+  updateLessonSchema,
+  createCreativeNoteSchema,
+  updateCreativeNoteSchema,
+  createHighlightSchema,
+  createTagSchema,
+  getOrCreateTagsSchema,
+  sanitizeTiptapContent,
+} from "./validations";
+import { handleActionError } from "./error-handler";
 
 // Types for Tiptap content
 export type TiptapContent = {
@@ -21,18 +45,20 @@ export type TiptapContent = {
 // Year Management Actions
 export async function createYear(userId: string, year: number) {
   try {
+    // Validate input
+    const validated = createYearSchema.parse({ userId, year });
+
     const newYear = await db.year.create({
       data: {
-        year,
-        userId,
+        year: validated.year,
+        userId: validated.userId,
       },
     });
 
     revalidatePath("/");
     return { success: true, data: newYear };
   } catch (error) {
-    console.error("Error creating year:", error);
-    return { success: false, error: "Failed to create year" };
+    return handleActionError(error);
   }
 }
 
@@ -236,11 +262,17 @@ export async function createGoal(
   description?: TiptapContent
 ) {
   try {
+    // Validate and sanitize input
+    const validated = createGoalSchema.parse({ yearId, title, description });
+    const sanitizedDescription = validated.description
+      ? sanitizeTiptapContent(validated.description)
+      : undefined;
+
     const goal = await db.goal.create({
       data: {
-        title,
-        description: description as Prisma.InputJsonValue,
-        yearId,
+        title: validated.title,
+        description: sanitizedDescription as Prisma.InputJsonValue,
+        yearId: validated.yearId,
       },
       include: {
         tasks: {
@@ -254,8 +286,7 @@ export async function createGoal(
     revalidatePath("/");
     return { success: true, data: goal };
   } catch (error) {
-    console.error("Error creating goal:", error);
-    return { success: false, error: "Failed to create goal" };
+    return handleActionError(error);
   }
 }
 
@@ -265,11 +296,17 @@ export async function createTask(
   description?: TiptapContent
 ) {
   try {
+    // Validate and sanitize input
+    const validated = createTaskSchema.parse({ goalId, title, description });
+    const sanitizedDescription = validated.description
+      ? sanitizeTiptapContent(validated.description)
+      : undefined;
+
     const task = await db.task.create({
       data: {
-        title,
-        description: description as Prisma.InputJsonValue,
-        goalId,
+        title: validated.title,
+        description: sanitizedDescription as Prisma.InputJsonValue,
+        goalId: validated.goalId,
       },
       include: {
         subtasks: true,
@@ -282,17 +319,19 @@ export async function createTask(
     revalidatePath("/");
     return { success: true, data: task };
   } catch (error) {
-    console.error("Error creating task:", error);
-    return { success: false, error: "Failed to create task" };
+    return handleActionError(error);
   }
 }
 
 export async function createSubTask(taskId: string, title: string) {
   try {
+    // Validate input
+    const validated = createSubTaskSchema.parse({ taskId, title });
+
     const subtask = await db.subTask.create({
       data: {
-        title,
-        taskId,
+        title: validated.title,
+        taskId: validated.taskId,
       },
     });
 
@@ -310,8 +349,7 @@ export async function createSubTask(taskId: string, title: string) {
     revalidatePath("/");
     return { success: true, data: subtask };
   } catch (error) {
-    console.error("Error creating subtask:", error);
-    return { success: false, error: "Failed to create subtask" };
+    return handleActionError(error);
   }
 }
 
@@ -391,6 +429,125 @@ async function recalculateGoalPercentage(goalId: string) {
   });
 }
 
+export async function updateGoal(goalId: string, title: string) {
+  try {
+    // Validate input
+    const validated = updateGoalSchema.parse({ goalId, title });
+
+    const goal = await db.goal.update({
+      where: { id: validated.goalId },
+      data: { title: validated.title },
+    });
+
+    revalidatePath("/");
+    return { success: true, data: goal };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function updateTask(taskId: string, title: string) {
+  try {
+    // Validate input
+    const validated = updateTaskSchema.parse({ taskId, title });
+
+    const task = await db.task.update({
+      where: { id: validated.taskId },
+      data: { title: validated.title },
+    });
+
+    revalidatePath("/");
+    return { success: true, data: task };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function updateSubTask(subtaskId: string, title: string) {
+  try {
+    // Validate input
+    const validated = updateSubTaskSchema.parse({ subtaskId, title });
+
+    const subtask = await db.subTask.update({
+      where: { id: validated.subtaskId },
+      data: { title: validated.title },
+    });
+
+    revalidatePath("/");
+    return { success: true, data: subtask };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function deleteGoal(goalId: string) {
+  try {
+    if (!goalId) {
+      return { success: false, error: "Goal ID is required" };
+    }
+
+    await db.goal.delete({
+      where: { id: goalId },
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function deleteTask(taskId: string) {
+  try {
+    if (!taskId) {
+      return { success: false, error: "Task ID is required" };
+    }
+
+    await db.task.delete({
+      where: { id: taskId },
+    });
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function deleteSubTask(subtaskId: string) {
+  try {
+    if (!subtaskId) {
+      return { success: false, error: "Subtask ID is required" };
+    }
+
+    const subtask = await db.subTask.findUnique({
+      where: { id: subtaskId },
+      include: {
+        task: {
+          select: { id: true, goalId: true },
+        },
+      },
+    });
+
+    if (!subtask) {
+      return { success: false, error: "Subtask not found" };
+    }
+
+    await db.subTask.delete({
+      where: { id: subtaskId },
+    });
+
+    // Recalculate percentages
+    await recalculateTaskPercentage(subtask.task.id);
+    await recalculateGoalPercentage(subtask.task.goalId);
+
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
 export async function getGoals(yearId: string) {
   try {
     const goals = await db.goal.findMany({
@@ -424,8 +581,7 @@ export async function getGoals(yearId: string) {
 
     return { success: true, data: goals };
   } catch (error) {
-    console.error("Error fetching goals:", error);
-    return { success: false, error: "Failed to fetch goals" };
+    return handleActionError(error);
   }
 }
 
@@ -595,11 +751,17 @@ export async function createLesson(
   content?: TiptapContent
 ) {
   try {
+    // Validate and sanitize input
+    const validated = createLessonSchema.parse({ yearId, title, content });
+    const sanitizedContent = validated.content
+      ? sanitizeTiptapContent(validated.content)
+      : undefined;
+
     const lesson = await db.lesson.create({
       data: {
-        title,
-        content: content as Prisma.InputJsonValue,
-        yearId,
+        title: validated.title,
+        content: sanitizedContent as Prisma.InputJsonValue,
+        yearId: validated.yearId,
       },
       include: {
         highlights: {
@@ -613,8 +775,7 @@ export async function createLesson(
     revalidatePath("/");
     return { success: true, data: lesson };
   } catch (error) {
-    console.error("Error creating lesson:", error);
-    return { success: false, error: "Failed to create lesson" };
+    return handleActionError(error);
   }
 }
 
@@ -624,24 +785,31 @@ export async function updateLesson(
   content: TiptapContent
 ) {
   try {
+    // Validate and sanitize input
+    const validated = updateLessonSchema.parse({ lessonId, title, content });
+    const sanitizedContent = sanitizeTiptapContent(validated.content);
+
     const lesson = await db.lesson.update({
-      where: { id: lessonId },
+      where: { id: validated.lessonId },
       data: {
-        title,
-        content: content as Prisma.InputJsonValue,
+        title: validated.title,
+        content: sanitizedContent as Prisma.InputJsonValue,
       },
     });
 
     revalidatePath("/");
     return { success: true, data: lesson };
   } catch (error) {
-    console.error("Error updating lesson:", error);
-    return { success: false, error: "Failed to update lesson" };
+    return handleActionError(error);
   }
 }
 
 export async function deleteLesson(lessonId: string) {
   try {
+    if (!lessonId) {
+      return { success: false, error: "Lesson ID is required" };
+    }
+
     await db.lesson.delete({
       where: { id: lessonId },
     });
@@ -649,13 +817,16 @@ export async function deleteLesson(lessonId: string) {
     revalidatePath("/");
     return { success: true };
   } catch (error) {
-    console.error("Error deleting lesson:", error);
-    return { success: false, error: "Failed to delete lesson" };
+    return handleActionError(error);
   }
 }
 
 export async function getLessons(yearId: string) {
   try {
+    if (!yearId) {
+      return { success: false, error: "Year ID is required" };
+    }
+
     const lessons = await db.lesson.findMany({
       where: { yearId },
       orderBy: { createdAt: "desc" },
@@ -670,8 +841,7 @@ export async function getLessons(yearId: string) {
 
     return { success: true, data: lessons };
   } catch (error) {
-    console.error("Error fetching lessons:", error);
-    return { success: false, error: "Failed to fetch lessons" };
+    return handleActionError(error);
   }
 }
 
@@ -774,44 +944,62 @@ export async function createHighlight(
   tagIds?: string[]
 ) {
   try {
-    // Create the base data object
-    const data: any = {
+    // Validate input
+    const validated = createHighlightSchema.parse({
+      entityType,
+      entityId,
       text,
       startOffset,
       endOffset,
+      tagIds,
+    });
+
+    // Validate offset relationship
+    if (validated.endOffset <= validated.startOffset) {
+      return {
+        success: false,
+        error: "End offset must be greater than start offset",
+      };
+    }
+
+    // Create the base data object
+    const data: any = {
+      text: validated.text,
+      startOffset: validated.startOffset,
+      endOffset: validated.endOffset,
       tags:
-        tagIds && tagIds.length > 0 && tagIds.every((id) => id)
+        validated.tagIds && validated.tagIds.length > 0
           ? {
-              connect: tagIds.map((id) => ({ id })),
+              connect: validated.tagIds.map((id) => ({ id })),
             }
           : undefined,
     };
 
     // Add the appropriate entity relation
-    switch (entityType) {
+    switch (validated.entityType) {
       case "dailyLog":
-        data.dailyLogId = entityId;
+        data.dailyLogId = validated.entityId;
         break;
       case "quarterlyReflection":
-        data.quarterlyReflectionId = entityId;
+        data.quarterlyReflectionId = validated.entityId;
         break;
       case "goal":
-        data.goalId = entityId;
+        data.goalId = validated.entityId;
         break;
       case "task":
-        data.taskId = entityId;
+        data.taskId = validated.entityId;
         break;
       case "subtask":
-        data.subtaskId = entityId;
+        data.subtaskId = validated.entityId;
         break;
       case "chapter":
-        data.chapterId = entityId;
+        data.chapterId = validated.entityId;
         break;
       case "lesson":
-        data.lessonId = entityId;
+        data.lessonId = validated.entityId;
         break;
       case "creativeNote":
-        data.creativeNoteId = entityId;
+        data.creativeNoteId = validated.entityId;
         break;
     }
 
@@ -829,17 +1017,19 @@ export async function createHighlight(
     }
     return { success: true, data: highlight };
   } catch (error) {
-    console.error("Error creating highlight:", error);
-    return { success: false, error: "Failed to create highlight" };
+    return handleActionError(error);
   }
 }
 
 export async function createTag(userId: string, name: string) {
   try {
+    // Validate input
+    const validated = createTagSchema.parse({ userId, name });
+
     const tag = await db.tag.create({
       data: {
-        name,
-        userId,
+        name: validated.name,
+        userId: validated.userId,
       },
     });
 
@@ -850,20 +1040,22 @@ export async function createTag(userId: string, name: string) {
     }
     return { success: true, data: tag };
   } catch (error) {
-    console.error("Error creating tag:", error);
-    return { success: false, error: "Failed to create tag" };
+    return handleActionError(error);
   }
 }
 
 export async function getOrCreateTags(userId: string, tagNames: string[]) {
   try {
+    // Validate input
+    const validated = getOrCreateTagsSchema.parse({ userId, tagNames });
+
     const tags = await Promise.all(
-      tagNames.map(async (name) => {
+      validated.tagNames.map(async (name) => {
         // Try to find existing tag
         let tag = await db.tag.findUnique({
           where: {
             userId_name: {
-              userId,
+              userId: validated.userId,
               name,
             },
           },
@@ -874,7 +1066,7 @@ export async function getOrCreateTags(userId: string, tagNames: string[]) {
           tag = await db.tag.create({
             data: {
               name,
-              userId,
+              userId: validated.userId,
             },
           });
         }
@@ -885,8 +1077,7 @@ export async function getOrCreateTags(userId: string, tagNames: string[]) {
 
     return { success: true, data: tags };
   } catch (error) {
-    console.error("Error getting or creating tags:", error);
-    return { success: false, error: "Failed to get or create tags" };
+    return handleActionError(error);
   }
 }
 
@@ -1376,132 +1567,5 @@ export async function searchContent(yearId: string, query: string) {
   } catch (error) {
     console.error("Error searching content:", error);
     return { success: false, error: "Failed to search content" };
-  }
-}
-
-// Utility Actions
-export async function deleteGoal(goalId: string) {
-  try {
-    await db.goal.delete({
-      where: { id: goalId },
-    });
-
-    revalidatePath("/");
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting goal:", error);
-    return { success: false, error: "Failed to delete goal" };
-  }
-}
-
-export async function deleteTask(taskId: string) {
-  try {
-    const task = await db.task.findUnique({
-      where: { id: taskId },
-      select: { goalId: true },
-    });
-
-    await db.task.delete({
-      where: { id: taskId },
-    });
-
-    // Recalculate goal percentage
-    if (task) {
-      await recalculateGoalPercentage(task.goalId);
-    }
-
-    revalidatePath("/");
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting task:", error);
-    return { success: false, error: "Failed to delete task" };
-  }
-}
-
-export async function deleteSubTask(subtaskId: string) {
-  try {
-    const subtask = await db.subTask.findUnique({
-      where: { id: subtaskId },
-      include: {
-        task: {
-          select: { id: true, goalId: true },
-        },
-      },
-    });
-
-    await db.subTask.delete({
-      where: { id: subtaskId },
-    });
-
-    // Recalculate percentages
-    if (subtask) {
-      await recalculateTaskPercentage(subtask.task.id);
-      await recalculateGoalPercentage(subtask.task.goalId);
-    }
-
-    revalidatePath("/");
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting subtask:", error);
-    return { success: false, error: "Failed to delete subtask" };
-  }
-}
-
-export async function updateGoal(
-  goalId: string,
-  title: string,
-  description?: TiptapContent
-) {
-  try {
-    const goal = await db.goal.update({
-      where: { id: goalId },
-      data: {
-        title,
-        description: description as Prisma.InputJsonValue,
-      },
-    });
-
-    revalidatePath("/");
-    return { success: true, data: goal };
-  } catch (error) {
-    console.error("Error updating goal:", error);
-    return { success: false, error: "Failed to update goal" };
-  }
-}
-
-export async function updateTask(
-  taskId: string,
-  title: string,
-  description?: TiptapContent
-) {
-  try {
-    const task = await db.task.update({
-      where: { id: taskId },
-      data: {
-        title,
-        description: description as Prisma.InputJsonValue,
-      },
-    });
-
-    revalidatePath("/");
-    return { success: true, data: task };
-  } catch (error) {
-    console.error("Error updating task:", error);
-    return { success: false, error: "Failed to update task" };
-  }
-}
-
-export async function updateSubTask(subtaskId: string, title: string) {
-  try {
-    const subtask = await db.subTask.update({
-      where: { id: subtaskId },
-      data: { title },
-    });
-
-    revalidatePath("/");
-    return { success: true, data: subtask };
-  } catch (error) {
-    console.error("Error updating subtask:", error);
-    return { success: false, error: "Failed to update subtask" };
   }
 }

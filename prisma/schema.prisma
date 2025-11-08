@@ -80,6 +80,8 @@ model Year {
   creativeNotes        CreativeNote[]
 
   @@unique([userId, year])
+  @@index([userId])
+  @@index([year])
 }
 
 model DailyLog {
@@ -92,6 +94,8 @@ model DailyLog {
   highlights Highlight[]
 
   @@unique([yearId, date])
+  @@index([yearId])
+  @@index([date])
 }
 
 model QuarterlyReflection {
@@ -104,6 +108,7 @@ model QuarterlyReflection {
   highlights Highlight[]
 
   @@unique([yearId, quarter])
+  @@index([yearId])
 }
 
 model Goal {
@@ -116,6 +121,8 @@ model Goal {
 
   tasks      Task[]
   highlights Highlight[]
+
+  @@index([yearId])
 }
 
 model Task {
@@ -128,6 +135,8 @@ model Task {
 
   subtasks   SubTask[]
   highlights Highlight[]
+
+  @@index([goalId])
 }
 
 model SubTask {
@@ -138,6 +147,8 @@ model SubTask {
   task       Task    @relation(fields: [taskId], references: [id])
 
   highlights Highlight[]
+
+  @@index([taskId])
 }
 
 model Genre {
@@ -147,6 +158,8 @@ model Genre {
   year   Year   @relation(fields: [yearId], references: [id])
 
   books  Book[]
+
+  @@index([yearId])
 }
 
 model Book {
@@ -156,6 +169,8 @@ model Book {
   genre   Genre  @relation(fields: [genreId], references: [id])
 
   chapters Chapter[]
+
+  @@index([genreId])
 }
 
 model Chapter {
@@ -166,6 +181,8 @@ model Chapter {
   book    Book   @relation(fields: [bookId], references: [id])
 
   highlights Highlight[]
+
+  @@index([bookId])
 }
 
 model Lesson {
@@ -177,6 +194,9 @@ model Lesson {
   year      Year     @relation(fields: [yearId], references: [id])
 
   highlights Highlight[]
+
+  @@index([yearId])
+  @@index([createdAt])
 }
 
 model CreativeNote {
@@ -187,6 +207,9 @@ model CreativeNote {
   year      Year     @relation(fields: [yearId], references: [id])
 
   highlights Highlight[]
+
+  @@index([yearId])
+  @@index([createdAt])
 }
 
 model Tag {
@@ -198,6 +221,8 @@ model Tag {
   highlights Highlight[]
 
   @@unique([userId, name])
+  @@index([userId])
+  @@index([name])
 }
 
 model Highlight {
@@ -226,4 +251,14 @@ model Highlight {
   creativeNote          CreativeNote?        @relation(fields: [creativeNoteId], references: [id])
 
   tags Tag[]
+
+  @@index([dailyLogId])
+  @@index([quarterlyReflectionId])
+  @@index([goalId])
+  @@index([taskId])
+  @@index([subtaskId])
+  @@index([chapterId])
+  @@index([lessonId])
+  @@index([creativeNoteId])
+  @@index([createdAt])
 }

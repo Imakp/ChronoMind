@@ -11,6 +11,8 @@ import {
 } from "@/lib/actions";
 import { Button } from "./ui/button";
 import { Plus, Trash2, X } from "lucide-react";
+import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/error-handler";
 
 interface LessonsLearnedProps {
   yearId: string;
@@ -55,6 +57,9 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
     if (result.success && result.data) {
       setLessons((prev) => [result.data, ...prev]);
       setEditingLesson(result.data);
+      toast.success("Lesson created successfully");
+    } else {
+      toast.error(getUserFriendlyError(result.error));
     }
   };
 
@@ -68,6 +73,9 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
       if (editingLesson?.id === lessonId) {
         setEditingLesson(null);
       }
+      toast.success("Lesson deleted successfully");
+    } else {
+      toast.error(getUserFriendlyError(result.error));
     }
   };
 

@@ -1,14 +1,37 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { Button } from "@/components/ui/button";
-import { DailyLogs } from "@/components/daily-logs";
-import { QuarterlyReflections } from "@/components/quarterly-reflections";
-import { YearlyGoals } from "@/components/yearly-goals";
-import { BookNotes } from "@/components/book-notes";
-import { LessonsLearned } from "@/components/lessons-learned";
-import { CreativeDump } from "@/components/creative-dump";
+import { SectionSkeleton } from "@/components/loading/section-skeleton";
 import type { Year } from "@prisma/client";
+
+// Lazy load section components for better performance
+const DailyLogs = lazy(() =>
+  import("@/components/daily-logs").then((mod) => ({ default: mod.DailyLogs }))
+);
+const QuarterlyReflections = lazy(() =>
+  import("@/components/quarterly-reflections").then((mod) => ({
+    default: mod.QuarterlyReflections,
+  }))
+);
+const YearlyGoals = lazy(() =>
+  import("@/components/yearly-goals").then((mod) => ({
+    default: mod.YearlyGoals,
+  }))
+);
+const BookNotes = lazy(() =>
+  import("@/components/book-notes").then((mod) => ({ default: mod.BookNotes }))
+);
+const LessonsLearned = lazy(() =>
+  import("@/components/lessons-learned").then((mod) => ({
+    default: mod.LessonsLearned,
+  }))
+);
+const CreativeDump = lazy(() =>
+  import("@/components/creative-dump").then((mod) => ({
+    default: mod.CreativeDump,
+  }))
+);
 
 interface YearDashboardProps {
   year: Year;
@@ -192,19 +215,21 @@ export default function YearDashboard({ year, userId }: YearDashboardProps) {
             className="min-h-[60vh] sm:h-[calc(100vh-250px)]"
             data-testid={`section-content-${activeSection}`}
           >
-            {activeSection === "daily-logs" ? (
-              <DailyLogs yearId={year.id} year={year.year} />
-            ) : activeSection === "quarterly-reflections" ? (
-              <QuarterlyReflections yearId={year.id} year={year.year} />
-            ) : activeSection === "yearly-goals" ? (
-              <YearlyGoals yearId={year.id} year={year.year} />
-            ) : activeSection === "book-notes" ? (
-              <BookNotes yearId={year.id} year={year.year} />
-            ) : activeSection === "lessons-learned" ? (
-              <LessonsLearned yearId={year.id} year={year.year} />
-            ) : activeSection === "creative-dump" ? (
-              <CreativeDump yearId={year.id} year={year.year} />
-            ) : null}
+            <Suspense fallback={<SectionSkeleton />}>
+              {activeSection === "daily-logs" ? (
+                <DailyLogs yearId={year.id} year={year.year} />
+              ) : activeSection === "quarterly-reflections" ? (
+                <QuarterlyReflections yearId={year.id} year={year.year} />
+              ) : activeSection === "yearly-goals" ? (
+                <YearlyGoals yearId={year.id} year={year.year} />
+              ) : activeSection === "book-notes" ? (
+                <BookNotes yearId={year.id} year={year.year} />
+              ) : activeSection === "lessons-learned" ? (
+                <LessonsLearned yearId={year.id} year={year.year} />
+              ) : activeSection === "creative-dump" ? (
+                <CreativeDump yearId={year.id} year={year.year} />
+              ) : null}
+            </Suspense>
           </div>
         </div>
       )}

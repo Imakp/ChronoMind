@@ -60,7 +60,7 @@ export default function YearSelector({
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">ChronoMind</h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600" id="year-selector-description">
           Select a year to access your journal or create a new one
         </p>
       </div>
@@ -68,10 +68,17 @@ export default function YearSelector({
       {/* Existing Years */}
       {availableYears.length > 0 && (
         <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+          <h2
+            className="text-lg font-semibold text-gray-800 mb-4"
+            id="existing-years-heading"
+          >
             Your Existing Years
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <div
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
+            role="list"
+            aria-labelledby="existing-years-heading"
+          >
             {availableYears
               .sort((a, b) => b.year - a.year)
               .map((year) => (
@@ -80,6 +87,9 @@ export default function YearSelector({
                   variant={currentYear === year.year ? "default" : "outline"}
                   onClick={() => handleYearSelect(year.year)}
                   className="h-12 text-lg font-medium"
+                  aria-label={`Open journal for year ${year.year}`}
+                  aria-current={currentYear === year.year ? "page" : undefined}
+                  role="listitem"
                 >
                   {year.year}
                 </Button>
@@ -90,11 +100,18 @@ export default function YearSelector({
 
       {/* Year Creation */}
       <div className="border-t pt-8">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">
+        <h2
+          className="text-lg font-semibold text-gray-800 mb-4"
+          id="create-year-heading"
+        >
           Create or Access Year
         </h2>
 
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
+        <div
+          className="flex flex-col sm:flex-row gap-4 items-center"
+          role="group"
+          aria-labelledby="create-year-heading"
+        >
           <div className="flex-1">
             <label htmlFor="year-select" className="sr-only">
               Select Year
@@ -105,6 +122,7 @@ export default function YearSelector({
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={isPending}
+              aria-describedby="year-select-help"
             >
               {yearOptions.map((year) => (
                 <option key={year} value={year}>
@@ -118,6 +136,13 @@ export default function YearSelector({
             onClick={handleCreateYear}
             disabled={isPending}
             className="w-full sm:w-auto px-6 py-2"
+            aria-label={
+              isPending
+                ? "Loading"
+                : availableYears.some((y) => y.year === selectedYear)
+                ? `Open journal for year ${selectedYear}`
+                : `Create new journal for year ${selectedYear}`
+            }
           >
             {isPending
               ? "Loading..."
@@ -127,7 +152,12 @@ export default function YearSelector({
           </Button>
         </div>
 
-        <div className="mt-4 text-sm text-gray-500">
+        <div
+          className="mt-4 text-sm text-gray-500"
+          id="year-select-help"
+          role="status"
+          aria-live="polite"
+        >
           {availableYears.some((y) => y.year === selectedYear) ? (
             <p>This year already exists. Click "Open Year" to access it.</p>
           ) : (
@@ -142,7 +172,11 @@ export default function YearSelector({
 
       {/* Quick Access to Current Year */}
       {!availableYears.some((y) => y.year === currentYearValue) && (
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+        <div
+          className="mt-6 p-4 bg-blue-50 rounded-lg"
+          role="complementary"
+          aria-label="Quick start suggestion"
+        >
           <p className="text-sm text-blue-800 mb-2">
             Quick start: Create your {currentYearValue} journal
           </p>
@@ -159,6 +193,7 @@ export default function YearSelector({
               });
             }}
             disabled={isPending}
+            aria-label={`Quick create journal for current year ${currentYearValue}`}
           >
             Create {currentYearValue} Journal
           </Button>

@@ -125,8 +125,18 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading daily logs...</div>
+      <div
+        className="flex items-center justify-center h-64"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="flex flex-col items-center gap-3">
+          <div
+            className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
+            aria-hidden="true"
+          ></div>
+          <div className="text-gray-500">Loading daily logs...</div>
+        </div>
       </div>
     );
   }
@@ -134,19 +144,29 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
   return (
     <div className="flex h-full">
       {/* Sidebar with log list */}
-      <div className="w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto">
+      <nav
+        className="w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto"
+        aria-label="Daily logs navigation"
+      >
         <div className="p-4">
-          <h2 className="text-lg font-semibold mb-4">Daily Logs</h2>
+          <h2 className="text-lg font-semibold mb-4" id="daily-logs-heading">
+            Daily Logs
+          </h2>
           <Button
             onClick={handleToday}
             variant="outline"
             size="sm"
             className="w-full mb-4"
+            aria-label="Jump to today's log"
           >
-            <Calendar className="w-4 h-4 mr-2" />
+            <Calendar className="w-4 h-4 mr-2" aria-hidden="true" />
             Today
           </Button>
-          <div className="space-y-1">
+          <div
+            className="space-y-1"
+            role="list"
+            aria-labelledby="daily-logs-heading"
+          >
             {logs.map((log) => (
               <button
                 key={log.id}
@@ -156,6 +176,16 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                     ? "bg-blue-100 text-blue-900 font-medium"
                     : "hover:bg-gray-100 text-gray-700"
                 }`}
+                role="listitem"
+                aria-label={`Log for ${new Date(log.date).toLocaleDateString(
+                  "en-US",
+                  {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  }
+                )}`}
+                aria-current={selectedLog?.id === log.id ? "page" : undefined}
               >
                 {new Date(log.date).toLocaleDateString("en-US", {
                   month: "short",
@@ -165,7 +195,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             ))}
           </div>
         </div>
-      </div>
+      </nav>
 
       {/* Main editor area */}
       <div className="flex-1 flex flex-col">
@@ -174,29 +204,49 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             {/* Header with navigation */}
             <div className="border-b border-gray-200 bg-white px-6 py-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+                <div
+                  className="flex items-center gap-2"
+                  role="group"
+                  aria-label="Date navigation"
+                >
                   <Button
                     onClick={handlePreviousDay}
                     variant="outline"
                     size="sm"
+                    aria-label="Go to previous day"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                   </Button>
-                  <h3 className="text-xl font-semibold">
+                  <h3 className="text-xl font-semibold" id="current-log-date">
                     {formatDate(selectedLog.date)}
                   </h3>
-                  <Button onClick={handleNextDay} variant="outline" size="sm">
-                    <ChevronRight className="w-4 h-4" />
+                  <Button
+                    onClick={handleNextDay}
+                    variant="outline"
+                    size="sm"
+                    aria-label="Go to next day"
+                  >
+                    <ChevronRight className="w-4 h-4" aria-hidden="true" />
                   </Button>
                 </div>
                 {isSaving && (
-                  <div className="text-sm text-gray-500">Saving...</div>
+                  <div
+                    className="text-sm text-gray-500"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    Saving...
+                  </div>
                 )}
               </div>
             </div>
 
             {/* Editor */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div
+              className="flex-1 overflow-y-auto p-6"
+              role="main"
+              aria-labelledby="current-log-date"
+            >
               <EditorWithPersistence
                 entityType="dailyLog"
                 entityId={selectedLog.id}
@@ -209,11 +259,18 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="flex-1 flex items-center justify-center" role="main">
             <div className="text-center">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <Calendar
+                className="w-12 h-12 text-gray-400 mx-auto mb-4"
+                aria-hidden="true"
+              />
               <p className="text-gray-500">Select a date to start writing</p>
-              <Button onClick={handleToday} className="mt-4">
+              <Button
+                onClick={handleToday}
+                className="mt-4"
+                aria-label="Go to today's log"
+              >
                 Go to Today
               </Button>
             </div>

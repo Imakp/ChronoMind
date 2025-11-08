@@ -68,7 +68,7 @@ export function EditorWithPersistence({
           return;
         }
 
-        const tagIds = tagsResult.data.map((tag) => tag.id);
+        const tagIds = tagsResult.data.map((tag: { id: string }) => tag.id);
 
         // Create highlight with tags
         const highlightResult = await createHighlight(

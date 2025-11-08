@@ -25,6 +25,8 @@ import {
   Check,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
+import { getUserFriendlyError } from "@/lib/error-handler";
 
 interface YearlyGoalsProps {
   yearId: string;
@@ -62,23 +64,35 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
   };
 
   const handleCreateGoal = async () => {
-    if (!newGoalTitle.trim()) return;
+    if (!newGoalTitle.trim()) {
+      toast.error("Please enter a goal title");
+      return;
+    }
 
     const result = await createGoal(yearId, newGoalTitle.trim());
     if (result.success) {
       setNewGoalTitle("");
       await loadGoals();
+      toast.success("Goal created successfully");
+    } else {
+      toast.error(getUserFriendlyError(result.error));
     }
   };
 
   const handleCreateTask = async (goalId: string) => {
     const title = newTaskTitle[goalId];
-    if (!title?.trim()) return;
+    if (!title?.trim()) {
+      toast.error("Please enter a task title");
+      return;
+    }
 
     const result = await createTask(goalId, title.trim());
     if (result.success) {
       setNewTaskTitle({ ...newTaskTitle, [goalId]: "" });
       await loadGoals();
+      toast.success("Task created successfully");
+    } else {
+      toast.error(getUserFriendlyError(result.error));
     }
   };
 
@@ -102,8 +116,13 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
     if (
       confirm("Are you sure you want to delete this goal and all its tasks?")
     ) {
-      await deleteGoal(goalId);
-      await loadGoals();
+      const result = await deleteGoal(goalId);
+      if (result.success) {
+        await loadGoals();
+        toast.success("Goal deleted successfully");
+      } else {
+        toast.error(getUserFriendlyError(result.error));
+      }
     }
   };
 
@@ -139,11 +158,19 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
   };
 
   const saveEditGoal = async (goalId: string) => {
-    if (!editValue.trim()) return;
-    await updateGoal(goalId, editValue.trim());
-    setEditingGoal(null);
-    setEditValue("");
-    await loadGoals();
+    if (!editValue.trim()) {
+      toast.error("Goal title cannot be empty");
+      return;
+    }
+    const result = await updateGoal(goalId, editValue.trim());
+    if (result.success) {
+      setEditingGoal(null);
+      setEditValue("");
+      await loadGoals();
+      toast.success("Goal updated successfully");
+    } else {
+      toast.error(getUserFriendlyError(result.error));
+    }
   };
 
   const saveEditTask = async (taskId: string) => {
