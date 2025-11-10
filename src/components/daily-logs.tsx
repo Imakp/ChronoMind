@@ -48,20 +48,31 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
   // Get or create a daily log for a specific date
   const handleDateSelect = async (date: Date) => {
-    // Normalize date to midnight in local timezone before sending to server
+    // 1. Normalize date to midnight in local timezone
     const normalizedDate = new Date(date);
     normalizedDate.setHours(0, 0, 0, 0);
+    const normalizedTime = normalizedDate.getTime();
 
+    // 2. Check local state (logs) first to avoid unnecessary server calls
+    const existingLocalLog = logs.find(
+      (log) => new Date(log.date).getTime() === normalizedTime
+    );
+
+    if (existingLocalLog) {
+      // If found locally, select it and return immediately
+      setSelectedLog(existingLocalLog);
+      return;
+    }
+
+    // 3. If not found locally, call the server action (which will fetch or create)
     const result = await getOrCreateDailyLog(yearId, normalizedDate);
     if (result.success && result.data) {
       setSelectedLog(result.data);
-      // Update logs list if this is a new log
-      const existingLog = logs.find(
-        (log) =>
-          new Date(log.date).setHours(0, 0, 0, 0) ===
-          new Date(result.data.date).setHours(0, 0, 0, 0)
+      // Update logs list only if the log was not present locally
+      const existingLogOnServerReturn = logs.find(
+        (log) => new Date(log.date).getTime() === normalizedTime
       );
-      if (!existingLog) {
+      if (!existingLogOnServerReturn) {
         setLogs((prev) =>
           [result.data, ...prev].sort(
             (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -329,17 +340,19 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center p-4" role="main">
+          <div
+            className="flex-1 flex items-center justify-center p-4"
+            role="main"
+          >
             <div className="text-center">
               <Calendar
                 className="w-12 h-12 text-gray-400 mx-auto mb-4"
                 aria-hidden="true"
               />
-              <p className="text-gray-500 mb-4">Select a date to start writing</p>
-              <Button
-                onClick={handleToday}
-                aria-label="Go to today's log"
-              >
+              <p className="text-gray-500 mb-4">
+                Select a date to start writing
+              </p>
+              <Button onClick={handleToday} aria-label="Go to today's log">
                 Go to Today
               </Button>
             </div>
