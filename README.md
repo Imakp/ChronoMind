@@ -248,16 +248,6 @@ Contributions are welcome! Here's how you can help:
 - Update documentation for new features
 - Ensure accessibility compliance
 
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-```
-
 ## 📄 License
 
 This project is private and proprietary. All rights reserved.
