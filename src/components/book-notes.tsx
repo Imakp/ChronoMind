@@ -20,6 +20,8 @@ import {
   BookOpen,
   FolderOpen,
   Trash2,
+  Menu,
+  X,
 } from "lucide-react";
 import { EditorWithPersistence } from "@/components/editor/editor-with-persistence";
 
@@ -45,6 +47,8 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   const [newChapterTitle, setNewChapterTitle] = useState<{
     [key: string]: string;
   }>({});
+  // OPTIMIZATION: Track mobile sidebar visibility
+  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
 
   useEffect(() => {
     loadBookNotes();
@@ -100,6 +104,8 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
       title: chapter.title,
       content: chapter.content || { type: "doc", content: [] },
     });
+    // OPTIMIZATION: Hide sidebar on mobile when chapter is selected
+    setShowMobileSidebar(false);
   };
 
   const handleChapterSave = async (content: any) => {
@@ -160,15 +166,252 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading book notes...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="text-gray-500">Loading book notes...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex">
-      {/* Left Sidebar - Hierarchy Navigation */}
-      <div className="w-80 border-r border-gray-200 overflow-y-auto bg-gray-50">
+    /* OPTIMIZATION: Stack vertically on mobile, horizontal on desktop */
+    <div className="h-full flex flex-col md:flex-row relative">
+      {/* OPTIMIZATION: Mobile sidebar overlay - slides in from left */}
+      <div
+        className={`
+          md:hidden fixed inset-0 z-50 bg-black bg-opacity-50 transition-opacity
+          ${showMobileSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+        `}
+        onClick={() => setShowMobileSidebar(false)}
+      >
+        <div
+          className={`
+            w-[85%] max-w-sm h-full bg-gray-50 shadow-xl transform transition-transform
+            ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full'}
+          `}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Mobile sidebar header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+            <h2 className="text-lg font-bold text-gray-900">
+              Book Notes {year}
+            </h2>
+            <button
+              onClick={() => setShowMobileSidebar(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          {/* Mobile sidebar content */}
+          <div className="overflow-y-auto h-[calc(100%-64px)] p-3">
+            {/* Create New Genre */}
+            <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newGenreName}
+                  onChange={(e) => setNewGenreName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleCreateGenre();
+                  }}
+                  placeholder="Add genre..."
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleCreateGenre}
+                  disabled={!newGenreName.trim()}
+                >
+                  <Plus className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Genres List (same content as desktop) */}
+            {genres.length === 0 ? (
+              <div className="text-center py-8 bg-white rounded-lg shadow-sm border border-gray-200">
+                <div className="text-4xl mb-2">📚</div>
+                <p className="text-sm text-gray-600">No genres yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {genres.map((genre) => (
+                  <div
+                    key={genre.id}
+                    className="bg-white rounded-lg shadow-sm border border-gray-200"
+                  >
+                    {/* Genre Header */}
+                    <div className="p-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => toggleGenreExpanded(genre.id)}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          {expandedGenres.has(genre.id) ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                        </button>
+                        <FolderOpen className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-gray-900 text-sm flex-1 truncate">
+                          {genre.name}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {genre.books.length}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteGenre(genre.id);
+                          }}
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {/* Expanded Genre Content */}
+                      {expandedGenres.has(genre.id) && (
+                        <div className="mt-2 ml-6 space-y-2">
+                          {/* Add Book Input */}
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={newBookTitle[genre.id] || ""}
+                              onChange={(e) =>
+                                setNewBookTitle({
+                                  ...newBookTitle,
+                                  [genre.id]: e.target.value,
+                                })
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleCreateBook(genre.id);
+                              }}
+                              placeholder="Add book..."
+                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleCreateBook(genre.id)}
+                              disabled={!newBookTitle[genre.id]?.trim()}
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
+                          </div>
+
+                          {/* Books List */}
+                          {genre.books.map((book) => (
+                            <div
+                              key={book.id}
+                              className="bg-gray-50 rounded-md p-2 border border-gray-200"
+                            >
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => toggleBookExpanded(book.id)}
+                                  className="text-gray-500 hover:text-gray-700"
+                                >
+                                  {expandedBooks.has(book.id) ? (
+                                    <ChevronDown className="w-3 h-3" />
+                                  ) : (
+                                    <ChevronRight className="w-3 h-3" />
+                                  )}
+                                </button>
+                                <BookOpen className="w-3 h-3 text-green-600" />
+                                <span className="text-xs font-medium text-gray-900 flex-1 truncate">
+                                  {book.title}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {book.chapters.length}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteBook(book.id);
+                                  }}
+                                  className="text-gray-400 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+
+                              {/* Expanded Book Content */}
+                              {expandedBooks.has(book.id) && (
+                                <div className="mt-2 ml-5 space-y-1">
+                                  {/* Add Chapter Input */}
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="text"
+                                      value={newChapterTitle[book.id] || ""}
+                                      onChange={(e) =>
+                                        setNewChapterTitle({
+                                          ...newChapterTitle,
+                                          [book.id]: e.target.value,
+                                        })
+                                      }
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter")
+                                          handleCreateChapter(book.id);
+                                      }}
+                                      placeholder="Add chapter..."
+                                      className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleCreateChapter(book.id)}
+                                      disabled={!newChapterTitle[book.id]?.trim()}
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+
+                                  {/* Chapters List */}
+                                  {book.chapters.map((chapter) => (
+                                    <div
+                                      key={chapter.id}
+                                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-blue-50 ${
+                                        selectedChapter?.id === chapter.id
+                                          ? "bg-blue-100 text-blue-900 font-medium"
+                                          : "text-gray-700"
+                                      }`}
+                                    >
+                                      <button
+                                        onClick={() => handleChapterClick(chapter)}
+                                        className="flex-1 text-left truncate"
+                                      >
+                                        {chapter.title}
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteChapter(chapter.id);
+                                        }}
+                                        className="text-gray-400 hover:text-red-600 shrink-0"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* OPTIMIZATION: Desktop sidebar - visible only on md+ */}
+      <div className="hidden md:block w-80 flex-shrink-0 border-r border-gray-200 overflow-y-auto bg-gray-50">
         <div className="p-4">
           <h2 className="text-xl font-bold text-gray-900 mb-4">
             Book Notes {year}
@@ -197,7 +440,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
             </div>
           </div>
 
-          {/* Genres List */}
+          {/* Genres List (same as mobile content) */}
           {genres.length === 0 ? (
             <div className="text-center py-8 bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="text-4xl mb-2">📚</div>
@@ -224,7 +467,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                         )}
                       </button>
                       <FolderOpen className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-gray-900 text-sm flex-1">
+                      <span className="font-medium text-gray-900 text-sm flex-1 truncate">
                         {genre.name}
                       </span>
                       <span className="text-xs text-gray-500">
@@ -235,7 +478,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                           e.stopPropagation();
                           handleDeleteGenre(genre.id);
                         }}
-                        className="text-gray-400 hover:text-red-600 ml-2"
+                        className="text-gray-400 hover:text-red-600"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -288,7 +531,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                 )}
                               </button>
                               <BookOpen className="w-3 h-3 text-green-600" />
-                              <span className="text-xs font-medium text-gray-900 flex-1">
+                              <span className="text-xs font-medium text-gray-900 flex-1 truncate">
                                 {book.title}
                               </span>
                               <span className="text-xs text-gray-500">
@@ -299,7 +542,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                   e.stopPropagation();
                                   handleDeleteBook(book.id);
                                 }}
-                                className="text-gray-400 hover:text-red-600 ml-2"
+                                className="text-gray-400 hover:text-red-600"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
@@ -346,10 +589,8 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                     }`}
                                   >
                                     <button
-                                      onClick={() =>
-                                        handleChapterClick(chapter)
-                                      }
-                                      className="flex-1 text-left"
+                                      onClick={() => handleChapterClick(chapter)}
+                                      className="flex-1 text-left truncate"
                                     >
                                       {chapter.title}
                                     </button>
@@ -358,7 +599,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                         e.stopPropagation();
                                         handleDeleteChapter(chapter.id);
                                       }}
-                                      className="text-gray-400 hover:text-red-600"
+                                      className="text-gray-400 hover:text-red-600 shrink-0"
                                     >
                                       <Trash2 className="w-3 h-3" />
                                     </button>
@@ -379,15 +620,25 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
       </div>
 
       {/* Right Panel - Chapter Editor */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-w-0">
         {selectedChapter ? (
           <div className="h-full flex flex-col">
-            <div className="border-b border-gray-200 bg-white px-6 py-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {selectedChapter.title}
-              </h3>
+            {/* OPTIMIZATION: Mobile header with back button */}
+            <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setShowMobileSidebar(true)}
+                  className="md:hidden text-gray-600 hover:text-gray-900"
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate flex-1">
+                  {selectedChapter.title}
+                </h3>
+              </div>
             </div>
-            <div className="flex-1 p-6">
+            {/* OPTIMIZATION: Reduced padding on mobile */}
+            <div className="flex-1 p-4 sm:p-6">
               <EditorWithPersistence
                 key={selectedChapter.id}
                 entityType="chapter"
@@ -399,14 +650,22 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-full p-4">
             <div className="text-center">
+              {/* OPTIMIZATION: Show menu button when no chapter selected on mobile */}
+              <button
+                onClick={() => setShowMobileSidebar(true)}
+                className="md:hidden mb-4 mx-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Menu className="w-5 h-5" />
+                <span>Browse Books</span>
+              </button>
               <div className="text-6xl mb-4">📖</div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
                 No Chapter Selected
               </h3>
-              <p className="text-gray-600">
-                Select a chapter from the left to start editing
+              <p className="text-gray-600 text-sm sm:text-base">
+                Select a chapter to start editing
               </p>
             </div>
           </div>

@@ -156,14 +156,16 @@ mark.highlight-with-tags:hover {
   background-color: #a16207;
 }
 
-/* Tiptap Prose Styles */
+/* OPTIMIZATION: Mobile-Responsive Tiptap Prose Styles */
 .prose {
   max-width: 100%;
 }
 
+/* OPTIMIZATION: Responsive base text size and line height */
 .prose p {
   margin-top: 0.75em;
   margin-bottom: 0.75em;
+  @apply text-sm sm:text-base leading-relaxed;
 }
 
 .prose h1,
@@ -172,28 +174,28 @@ mark.highlight-with-tags:hover {
   margin-top: 1.5em;
   margin-bottom: 0.75em;
   font-weight: 600;
+  @apply leading-tight;
 }
 
+/* OPTIMIZATION: Responsive heading sizes - smaller on mobile, larger on desktop */
 .prose h1 {
-  font-size: 1.875rem;
-  line-height: 2.25rem;
+  @apply text-xl sm:text-2xl lg:text-3xl;
 }
 
 .prose h2 {
-  font-size: 1.5rem;
-  line-height: 2rem;
+  @apply text-lg sm:text-xl lg:text-2xl;
 }
 
 .prose h3 {
-  font-size: 1.25rem;
-  line-height: 1.75rem;
+  @apply text-base sm:text-lg lg:text-xl;
 }
 
+/* OPTIMIZATION: Responsive list spacing and indentation */
 .prose ul,
 .prose ol {
   margin-top: 0.75em;
   margin-bottom: 0.75em;
-  padding-left: 1.5em;
+  @apply pl-5 sm:pl-6;
 }
 
 .prose ul {
@@ -207,6 +209,7 @@ mark.highlight-with-tags:hover {
 .prose li {
   margin-top: 0.25em;
   margin-bottom: 0.25em;
+  @apply text-sm sm:text-base;
 }
 
 .prose strong {
@@ -217,13 +220,75 @@ mark.highlight-with-tags:hover {
   font-style: italic;
 }
 
+/* OPTIMIZATION: Responsive code block sizing */
 .prose code {
   background-color: #f3f4f6;
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
-  font-size: 0.875em;
+  @apply text-xs sm:text-sm;
 }
 
 .dark .prose code {
   background-color: #374151;
+}
+
+/* OPTIMIZATION: Better mobile touch targets for links */
+.prose a {
+  @apply text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300;
+  @apply underline decoration-1 underline-offset-2;
+  @apply py-1; /* Increased touch target */
+}
+
+/* OPTIMIZATION: Responsive blockquote styling */
+.prose blockquote {
+  @apply border-l-4 border-gray-300 dark:border-gray-600;
+  @apply pl-3 sm:pl-4 italic text-gray-700 dark:text-gray-300;
+  @apply my-4 text-sm sm:text-base;
+}
+
+/* OPTIMIZATION: Better table responsiveness */
+.prose table {
+  @apply w-full text-xs sm:text-sm;
+  @apply border-collapse;
+}
+
+.prose th,
+.prose td {
+  @apply border border-gray-300 dark:border-gray-600;
+  @apply px-2 sm:px-3 py-1 sm:py-2;
+}
+
+.prose th {
+  @apply bg-gray-100 dark:bg-gray-800 font-semibold;
+}
+
+/* OPTIMIZATION: Responsive horizontal rule */
+.prose hr {
+  @apply border-gray-300 dark:border-gray-600;
+  @apply my-6 sm:my-8;
+}
+
+/* OPTIMIZATION: Better spacing on mobile for nested lists */
+.prose ul ul,
+.prose ol ul,
+.prose ul ol,
+.prose ol ol {
+  @apply mt-2 mb-2;
+}
+
+/* OPTIMIZATION: Ensure images are responsive */
+.prose img {
+  @apply max-w-full h-auto rounded-lg;
+  @apply my-4;
+}
+
+/* OPTIMIZATION: Better pre/code block handling on mobile */
+.prose pre {
+  @apply overflow-x-auto text-xs sm:text-sm;
+  @apply p-3 sm:p-4 rounded-lg;
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0;
 }

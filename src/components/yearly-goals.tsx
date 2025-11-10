@@ -226,26 +226,30 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading goals...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="text-gray-500">Loading goals...</div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto p-6">
+    /* OPTIMIZATION: Responsive padding - p-4 on mobile, p-6 on larger screens */
+    <div className="h-full overflow-y-auto p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <div className="mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
             Yearly Goals for {year}
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             Track your goals with hierarchical progress calculation
           </p>
         </div>
 
         {/* Create New Goal */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          <div className="flex gap-2">
+        <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               type="text"
               value={newGoalTitle}
@@ -254,9 +258,13 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                 if (e.key === "Enter") handleCreateGoal();
               }}
               placeholder="Add a new goal..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <Button onClick={handleCreateGoal} disabled={!newGoalTitle.trim()}>
+            <Button 
+              onClick={handleCreateGoal} 
+              disabled={!newGoalTitle.trim()}
+              className="w-full sm:w-auto"
+            >
               <Plus className="w-4 h-4 mr-1" />
               Add Goal
             </Button>
@@ -265,28 +273,28 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
 
         {/* Goals List */}
         {goals.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200 px-4">
             <div className="text-6xl mb-4">🎯</div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
               No Goals Yet
             </h3>
-            <p className="text-gray-600">
+            <p className="text-sm sm:text-base text-gray-600">
               Start by adding your first goal for {year}
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {goals.map((goal) => (
               <div
                 key={goal.id}
                 className="bg-white rounded-lg shadow-sm border border-gray-200"
               >
                 {/* Goal Header */}
-                <div className="p-4">
-                  <div className="flex items-start gap-3">
+                <div className="p-3 sm:p-4">
+                  <div className="flex items-start gap-2 sm:gap-3">
                     <button
                       onClick={() => toggleGoalExpanded(goal.id)}
-                      className="mt-1 text-gray-500 hover:text-gray-700"
+                      className="mt-1 text-gray-500 hover:text-gray-700 shrink-0"
                     >
                       {expandedGoals.has(goal.id) ? (
                         <ChevronDown className="w-5 h-5" />
@@ -294,7 +302,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                         <ChevronRight className="w-5 h-5" />
                       )}
                     </button>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                       {editingGoal === goal.id ? (
                         <div className="flex gap-2 mb-2">
                           <input
@@ -305,12 +313,13 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                               if (e.key === "Enter") saveEditGoal(goal.id);
                               if (e.key === "Escape") cancelEdit();
                             }}
-                            className="flex-1 px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="flex-1 px-2 sm:px-3 py-1 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             autoFocus
                           />
                           <Button
                             size="sm"
                             onClick={() => saveEditGoal(goal.id)}
+                            className="shrink-0"
                           >
                             <Check className="w-4 h-4" />
                           </Button>
@@ -318,16 +327,17 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                             size="sm"
                             variant="outline"
                             onClick={cancelEdit}
+                            className="shrink-0"
                           >
                             <X className="w-4 h-4" />
                           </Button>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex-1 min-w-0 break-words">
                             {goal.title}
                           </h3>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1 sm:gap-2 shrink-0">
                             <button
                               onClick={() => startEditGoal(goal.id, goal.title)}
                               className="text-gray-500 hover:text-blue-600"
@@ -345,7 +355,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                       )}
                       {/* Progress Bar */}
                       <div className="mb-2">
-                        <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                        <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 mb-1">
                           <span>Progress</span>
                           <span className="font-semibold">
                             {goal.percentage.toFixed(0)}%
@@ -360,7 +370,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                           />
                         </div>
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-xs sm:text-sm text-gray-500">
                         {goal.tasks.length} task
                         {goal.tasks.length !== 1 ? "s" : ""}
                       </div>
@@ -369,7 +379,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
 
                   {/* Expanded Goal Content */}
                   {expandedGoals.has(goal.id) && (
-                    <div className="mt-4 ml-8 space-y-3">
+                    <div className="mt-3 sm:mt-4 ml-6 sm:ml-8 space-y-3">
                       {/* Add Task Input */}
                       <div className="flex gap-2">
                         <input
@@ -385,12 +395,13 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                             if (e.key === "Enter") handleCreateTask(goal.id);
                           }}
                           placeholder="Add a task..."
-                          className="flex-1 px-3 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <Button
                           size="sm"
                           onClick={() => handleCreateTask(goal.id)}
                           disabled={!newTaskTitle[goal.id]?.trim()}
+                          className="shrink-0"
                         >
                           <Plus className="w-3 h-3" />
                         </Button>
@@ -400,12 +411,12 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                       {goal.tasks.map((task) => (
                         <div
                           key={task.id}
-                          className="bg-gray-50 rounded-md p-3 border border-gray-200"
+                          className="bg-gray-50 rounded-md p-2 sm:p-3 border border-gray-200"
                         >
                           <div className="flex items-start gap-2">
                             <button
                               onClick={() => toggleTaskExpanded(task.id)}
-                              className="mt-1 text-gray-500 hover:text-gray-700"
+                              className="mt-1 text-gray-500 hover:text-gray-700 shrink-0"
                             >
                               {expandedTasks.has(task.id) ? (
                                 <ChevronDown className="w-4 h-4" />
@@ -413,7 +424,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                 <ChevronRight className="w-4 h-4" />
                               )}
                             </button>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               {editingTask === task.id ? (
                                 <div className="flex gap-2 mb-2">
                                   <input
@@ -427,12 +438,13 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                         saveEditTask(task.id);
                                       if (e.key === "Escape") cancelEdit();
                                     }}
-                                    className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="flex-1 px-2 py-1 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     autoFocus
                                   />
                                   <Button
                                     size="sm"
                                     onClick={() => saveEditTask(task.id)}
+                                    className="shrink-0"
                                   >
                                     <Check className="w-3 h-3" />
                                   </Button>
@@ -440,16 +452,17 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                     size="sm"
                                     variant="outline"
                                     onClick={cancelEdit}
+                                    className="shrink-0"
                                   >
                                     <X className="w-3 h-3" />
                                   </Button>
                                 </div>
                               ) : (
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-medium text-gray-900">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <h4 className="text-sm sm:text-base font-medium text-gray-900 flex-1 min-w-0 break-words">
                                     {task.title}
                                   </h4>
-                                  <div className="flex gap-2">
+                                  <div className="flex gap-1 sm:gap-2 shrink-0">
                                     <button
                                       onClick={() =>
                                         startEditTask(task.id, task.title)
@@ -518,6 +531,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                       disabled={
                                         !newSubTaskTitle[task.id]?.trim()
                                       }
+                                      className="shrink-0"
                                     >
                                       <Plus className="w-3 h-3" />
                                     </Button>
@@ -535,10 +549,10 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                         onChange={() =>
                                           handleToggleSubTask(subtask.id)
                                         }
-                                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 shrink-0"
                                       />
                                       {editingSubTask === subtask.id ? (
-                                        <div className="flex gap-2 flex-1">
+                                        <div className="flex gap-2 flex-1 min-w-0">
                                           <input
                                             type="text"
                                             value={editValue}
@@ -559,6 +573,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                             onClick={() =>
                                               saveEditSubTask(subtask.id)
                                             }
+                                            className="shrink-0"
                                           >
                                             <Check className="w-3 h-3" />
                                           </Button>
@@ -566,6 +581,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                             size="sm"
                                             variant="outline"
                                             onClick={cancelEdit}
+                                            className="shrink-0"
                                           >
                                             <X className="w-3 h-3" />
                                           </Button>
@@ -573,7 +589,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                       ) : (
                                         <>
                                           <span
-                                            className={`flex-1 text-sm ${
+                                            className={`flex-1 text-xs sm:text-sm min-w-0 break-words ${
                                               subtask.isComplete
                                                 ? "line-through text-gray-500"
                                                 : "text-gray-900"
@@ -581,7 +597,7 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
                                           >
                                             {subtask.title}
                                           </span>
-                                          <div className="flex gap-1">
+                                          <div className="flex gap-1 shrink-0">
                                             <button
                                               onClick={() =>
                                                 startEditSubTask(

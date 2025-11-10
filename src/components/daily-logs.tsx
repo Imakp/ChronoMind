@@ -137,6 +137,15 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
     });
   };
 
+  // Format date for mobile (shorter)
+  const formatDateMobile = (date: Date) => {
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
   if (isLoading) {
     return (
       <div
@@ -157,9 +166,9 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar with log list */}
+      {/* OPTIMIZATION: Desktop sidebar - hidden on mobile, visible at md+ */}
       <nav
-        className="w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto"
+        className="hidden md:block w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto"
         aria-label="Daily logs navigation"
       >
         <div className="p-4">
@@ -212,14 +221,50 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
       </nav>
 
       {/* Main editor area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* OPTIMIZATION: Mobile navigation header - only visible below md */}
+        {selectedLog && (
+          <div className="md:hidden border-b border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-base font-semibold">Daily Logs</h2>
+              <Button
+                onClick={handleToday}
+                variant="outline"
+                size="sm"
+                aria-label="Jump to today's log"
+              >
+                <Calendar className="w-4 h-4" aria-hidden="true" />
+                <span className="sr-only">Today</span>
+              </Button>
+            </div>
+            <label htmlFor="log-select" className="sr-only">
+              Select log date
+            </label>
+            <select
+              id="log-select"
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={selectedLog.id}
+              onChange={(e) => {
+                const log = logs.find((l) => l.id === e.target.value);
+                if (log) setSelectedLog(log);
+              }}
+            >
+              {logs.map((log) => (
+                <option key={log.id} value={log.id}>
+                  {formatDateMobile(log.date)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {selectedLog ? (
           <>
-            {/* Header with navigation */}
-            <div className="border-b border-gray-200 bg-white px-6 py-4">
-              <div className="flex items-center justify-between">
+            {/* OPTIMIZATION: Header with responsive layout */}
+            <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
                 <div
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 min-w-0 flex-1"
                   role="group"
                   aria-label="Date navigation"
                 >
@@ -227,17 +272,27 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                     onClick={handlePreviousDay}
                     variant="outline"
                     size="sm"
+                    className="shrink-0"
                     aria-label="Go to previous day"
                   >
                     <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                   </Button>
-                  <h3 className="text-xl font-semibold" id="current-log-date">
-                    {formatDate(selectedLog.date)}
+                  <h3
+                    className="text-base sm:text-xl font-semibold truncate"
+                    id="current-log-date"
+                  >
+                    <span className="hidden sm:inline">
+                      {formatDate(selectedLog.date)}
+                    </span>
+                    <span className="sm:hidden">
+                      {formatDateMobile(selectedLog.date)}
+                    </span>
                   </h3>
                   <Button
                     onClick={handleNextDay}
                     variant="outline"
                     size="sm"
+                    className="shrink-0"
                     aria-label="Go to next day"
                   >
                     <ChevronRight className="w-4 h-4" aria-hidden="true" />
@@ -245,7 +300,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                 </div>
                 {isSaving && (
                   <div
-                    className="text-sm text-gray-500"
+                    className="text-xs sm:text-sm text-gray-500 shrink-0"
                     role="status"
                     aria-live="polite"
                   >
@@ -255,9 +310,9 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
               </div>
             </div>
 
-            {/* Editor */}
+            {/* OPTIMIZATION: Editor with responsive padding */}
             <div
-              className="flex-1 overflow-y-auto p-6"
+              className="flex-1 overflow-y-auto p-4 sm:p-6"
               role="main"
               aria-labelledby="current-log-date"
             >
@@ -274,16 +329,15 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center" role="main">
+          <div className="flex-1 flex items-center justify-center p-4" role="main">
             <div className="text-center">
               <Calendar
                 className="w-12 h-12 text-gray-400 mx-auto mb-4"
                 aria-hidden="true"
               />
-              <p className="text-gray-500">Select a date to start writing</p>
+              <p className="text-gray-500 mb-4">Select a date to start writing</p>
               <Button
                 onClick={handleToday}
-                className="mt-4"
                 aria-label="Go to today's log"
               >
                 Go to Today

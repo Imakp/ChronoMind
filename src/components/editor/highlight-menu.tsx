@@ -39,6 +39,28 @@ export function HighlightMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
+  // OPTIMIZATION: Adjust menu position to prevent off-screen rendering
+  useEffect(() => {
+    if (!menuRef.current) return;
+
+    const menu = menuRef.current;
+    const rect = menu.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Adjust horizontal position if menu goes off-screen
+    if (rect.right > viewportWidth) {
+      const overflow = rect.right - viewportWidth;
+      menu.style.left = `${position.x - overflow - 10}px`;
+    }
+
+    // Adjust vertical position if menu goes off-screen
+    if (rect.bottom > viewportHeight) {
+      const overflow = rect.bottom - viewportHeight;
+      menu.style.top = `${position.y - overflow - 10}px`;
+    }
+  }, [position]);
+
   const handleAddTag = () => {
     const trimmedTag = inputValue.trim();
     if (trimmedTag && !tags.includes(trimmedTag)) {
@@ -68,49 +90,56 @@ export function HighlightMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-4 min-w-[300px]"
+      /* OPTIMIZATION: Changed min-w-[300px] to w-[280px] max-w-[95vw] for mobile */
+      className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-3 sm:p-4 w-[280px] max-w-[95vw]"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
       }}
     >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <TagIcon className="w-4 h-4 text-gray-600" />
-          <h3 className="text-sm font-semibold text-gray-900">Tag Highlight</h3>
+      {/* OPTIMIZATION: More compact header on mobile */}
+      <div className="flex items-center justify-between mb-2 sm:mb-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <TagIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
+          <h3 className="text-xs sm:text-sm font-semibold text-gray-900">Tag Highlight</h3>
         </div>
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Close"
         >
-          <X className="w-4 h-4" />
+          <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
       </div>
 
-      <div className="mb-3">
-        <p className="text-xs text-gray-600 mb-2 line-clamp-2">
+      {/* OPTIMIZATION: Smaller text preview on mobile */}
+      <div className="mb-2 sm:mb-3">
+        <p className="text-xs text-gray-600 line-clamp-2 break-words">
           &quot;{selectedText}&quot;
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
+      {/* OPTIMIZATION: Smaller tag badges on mobile */}
+      <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-3 min-h-[28px] sm:min-h-[32px]">
         {tags.map((tag) => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+            className="inline-flex items-center gap-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
           >
-            {tag}
+            <span className="break-all">{tag}</span>
             <button
               onClick={() => handleRemoveTag(tag)}
-              className="hover:text-blue-900"
+              className="hover:text-blue-900 shrink-0"
+              aria-label={`Remove ${tag} tag`}
             >
-              <X className="w-3 h-3" />
+              <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             </button>
           </span>
         ))}
       </div>
 
-      <div className="flex gap-2 mb-3">
+      {/* OPTIMIZATION: Compact input and button on mobile */}
+      <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3">
         <input
           ref={inputRef}
           type="text"
@@ -118,23 +147,34 @@ export function HighlightMenu({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add tag..."
-          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
         />
         <Button
           onClick={handleAddTag}
           size="sm"
           variant="outline"
-          className="px-3"
+          className="px-2 sm:px-3 shrink-0"
+          aria-label="Add tag"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </Button>
       </div>
 
-      <div className="flex justify-end gap-2">
-        <Button onClick={onClose} size="sm" variant="outline">
+      {/* OPTIMIZATION: Full-width buttons on mobile */}
+      <div className="flex flex-col sm:flex-row justify-end gap-1.5 sm:gap-2">
+        <Button 
+          onClick={onClose} 
+          size="sm" 
+          variant="outline"
+          className="w-full sm:w-auto order-2 sm:order-1"
+        >
           Cancel
         </Button>
-        <Button onClick={handleSave} size="sm">
+        <Button 
+          onClick={handleSave} 
+          size="sm"
+          className="w-full sm:w-auto order-1 sm:order-2"
+        >
           Save Tags
         </Button>
       </div>

@@ -29,44 +29,58 @@ export default function Navbar() {
   return (
     <nav className="bg-white shadow-sm border-b">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex items-center space-x-6">
-            <Link href="/" className="text-xl font-bold text-gray-900">
+        <div className="flex justify-between items-center h-16">
+          {/* Left side */}
+          <div className="flex items-center gap-3 sm:gap-6">
+            <Link href="/" className="text-xl font-bold text-gray-900 shrink-0">
               ChronoMind
             </Link>
             {session && (
-              <div className="flex items-center space-x-4">
+              <>
+                {/* Desktop: show text links */}
                 <Link
                   href="/"
-                  className="text-sm text-gray-700 hover:text-gray-900"
+                  className="hidden sm:block text-sm text-gray-700 hover:text-gray-900"
                 >
                   Years
                 </Link>
                 <Link
                   href="/tags"
-                  className="text-sm text-gray-700 hover:text-gray-900"
+                  className="hidden sm:block text-sm text-gray-700 hover:text-gray-900"
                 >
                   🏷️ Tags
                 </Link>
-              </div>
+                {/* Mobile: show only tags icon */}
+                <Link
+                  href="/tags"
+                  className="sm:hidden text-gray-700 hover:text-gray-900"
+                  aria-label="Tags"
+                >
+                  🏷️
+                </Link>
+              </>
             )}
           </div>
-          <div className="flex items-center space-x-4">
+
+          {/* Right side */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {session ? (
               <>
-                <span className="text-sm text-gray-700">
+                {/* Hide welcome text on small and medium screens */}
+                <span className="hidden lg:inline text-sm text-gray-700 truncate max-w-[150px]">
                   Welcome, {session.user?.name || session.user?.email}
                 </span>
                 <Button
                   onClick={() => signOut({ callbackUrl: "/auth/signin" })}
                   variant="outline"
                   size="sm"
+                  className="shrink-0"
                 >
                   Sign Out
                 </Button>
               </>
             ) : (
-              <div className="space-x-2">
+              <div className="flex gap-2">
                 <Link href="/auth/signin">
                   <Button variant="outline" size="sm">
                     Sign In

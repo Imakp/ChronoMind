@@ -63,7 +63,7 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none focus:outline-none min-h-[200px] px-4 py-3",
+          "prose prose-sm max-w-none focus:outline-none min-h-[200px] px-3 sm:px-4 py-3",
       },
     },
   });
@@ -144,12 +144,14 @@ export function RichTextEditor({
   return (
     <div className="relative border border-gray-300 rounded-lg bg-white">
       {editable && (
-        <div className="flex items-center gap-1 p-2 border-b border-gray-200 bg-gray-50">
+        /* OPTIMIZATION: Added flex-wrap to allow toolbar to wrap on mobile */
+        <div className="flex items-center flex-wrap gap-1 p-2 border-b border-gray-200 bg-gray-50">
           <Button
             onClick={() => editor.chain().focus().toggleBold().run()}
             variant={editor.isActive("bold") ? "default" : "outline"}
             size="sm"
             className="h-8 w-8 p-0"
+            title="Bold"
           >
             <Bold className="w-4 h-4" />
           </Button>
@@ -158,6 +160,7 @@ export function RichTextEditor({
             variant={editor.isActive("italic") ? "default" : "outline"}
             size="sm"
             className="h-8 w-8 p-0"
+            title="Italic"
           >
             <Italic className="w-4 h-4" />
           </Button>
@@ -170,6 +173,7 @@ export function RichTextEditor({
             }
             size="sm"
             className="h-8 w-8 p-0"
+            title="Heading"
           >
             <Heading2 className="w-4 h-4" />
           </Button>
@@ -178,6 +182,7 @@ export function RichTextEditor({
             variant={editor.isActive("bulletList") ? "default" : "outline"}
             size="sm"
             className="h-8 w-8 p-0"
+            title="Bullet List"
           >
             <List className="w-4 h-4" />
           </Button>
@@ -186,19 +191,23 @@ export function RichTextEditor({
             variant={editor.isActive("orderedList") ? "default" : "outline"}
             size="sm"
             className="h-8 w-8 p-0"
+            title="Numbered List"
           >
             <ListOrdered className="w-4 h-4" />
           </Button>
-          <div className="w-px h-6 bg-gray-300 mx-1" />
+          {/* OPTIMIZATION: Hide divider on mobile when wrapping, show on larger screens */}
+          <div className="hidden sm:block w-px h-6 bg-gray-300 mx-1" />
+          {/* OPTIMIZATION: Make Highlight button full-width on mobile after wrap */}
           <Button
             onClick={handleHighlightClick}
             variant="outline"
             size="sm"
-            className="h-8 px-3"
+            className="h-8 px-2 sm:px-3 flex-1 sm:flex-initial"
             disabled={editor.state.selection.empty}
+            title="Highlight text"
           >
             <Highlighter className="w-4 h-4 mr-1" />
-            Highlight
+            <span className="hidden xs:inline">Highlight</span>
           </Button>
         </div>
       )}
@@ -232,6 +241,25 @@ export function RichTextEditor({
           color: #adb5bd;
           pointer-events: none;
           height: 0;
+        }
+
+        /* OPTIMIZATION: Responsive prose styles for better mobile reading */
+        @media (max-width: 640px) {
+          .ProseMirror.prose {
+            font-size: 15px;
+            line-height: 1.6;
+          }
+          
+          .ProseMirror.prose h2 {
+            font-size: 1.4em;
+            margin-top: 1.2em;
+            margin-bottom: 0.6em;
+          }
+          
+          .ProseMirror.prose ul,
+          .ProseMirror.prose ol {
+            padding-left: 1.25em;
+          }
         }
       `}</style>
     </div>

@@ -97,12 +97,10 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
     const existingTimeout = saveTimeoutsRef.current.get(lessonId);
     if (existingTimeout) {
       clearTimeout(existingTimeout);
-      console.log("Cleared previous title save timeout");
     }
 
     // Set new timeout for auto-save
     const timeout = setTimeout(async () => {
-      console.log("Saving title after 1 second of inactivity...");
       setSavingLessons((prev) => new Set(prev).add(lessonId));
 
       // Get the current lesson data from ref
@@ -114,7 +112,6 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
             newTitle,
             (lesson.content as any) || { type: "doc", content: [] }
           );
-          console.log("Title saved successfully");
         } catch (error) {
           console.error("Error saving lesson title:", error);
         } finally {
@@ -132,8 +129,6 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
 
   // Auto-save functionality for content
   const handleContentChange = useCallback((lessonId: string, content: any) => {
-    console.log("Content change triggered - debouncing...");
-
     // Update local state immediately with new content
     setLessons((prev) =>
       prev.map((lesson) =>
@@ -150,12 +145,10 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
     const existingTimeout = saveTimeoutsRef.current.get(lessonId);
     if (existingTimeout) {
       clearTimeout(existingTimeout);
-      console.log("Cleared previous timeout - resetting 1 second timer");
     }
 
     // Set new timeout for auto-save
     const timeout = setTimeout(async () => {
-      console.log("1 second passed - saving content now...");
       setSavingLessons((prev) => new Set(prev).add(lessonId));
 
       // Get the current lesson data from ref
@@ -163,7 +156,6 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
       if (lesson) {
         try {
           const result = await updateLesson(lessonId, lesson.title, content);
-          console.log("Content saved successfully:", result);
         } catch (error) {
           console.error("Error saving lesson content:", error);
         } finally {
@@ -191,38 +183,41 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading lessons...</div>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="text-gray-500">Loading lessons...</div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="border-b border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Lessons Learned</h2>
-          <Button onClick={handleCreateLesson} size="sm">
+      {/* OPTIMIZATION: Header with responsive layout */}
+      <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <h2 className="text-xl sm:text-2xl font-semibold">Lessons Learned</h2>
+          <Button onClick={handleCreateLesson} size="sm" className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             New Lesson
           </Button>
         </div>
       </div>
 
-      {/* Card Grid */}
-      <div className="flex-1 overflow-y-auto p-6">
+      {/* OPTIMIZATION: Card Grid with responsive padding */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {lessons.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
+          <div className="flex flex-col items-center justify-center h-64 text-center px-4">
             <p className="text-gray-500 mb-4">
               No lessons yet. Start capturing your insights!
             </p>
-            <Button onClick={handleCreateLesson}>
+            <Button onClick={handleCreateLesson} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Create First Lesson
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {lessons.map((lesson) => (
               <div
                 key={lesson.id}
@@ -230,8 +225,8 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
                 onClick={() => setEditingLesson(lesson)}
               >
                 <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 flex-1 line-clamp-2">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <h3 className="font-semibold text-gray-900 flex-1 line-clamp-2 text-sm sm:text-base">
                       {lesson.title}
                     </h3>
                     <button
@@ -239,12 +234,12 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
                         e.stopPropagation();
                         handleDeleteLesson(lesson.id);
                       }}
-                      className="text-gray-400 hover:text-red-600 transition-colors ml-2"
+                      className="text-gray-400 hover:text-red-600 transition-colors shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="text-sm text-gray-600 line-clamp-4 mb-2">
+                  <div className="text-xs sm:text-sm text-gray-600 line-clamp-4 mb-2">
                     {/* Display plain text preview of content */}
                     {lesson.content &&
                     typeof lesson.content === "object" &&
@@ -271,32 +266,33 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
         )}
       </div>
 
-      {/* Full-screen editor modal */}
+      {/* OPTIMIZATION: Full-screen modal on mobile, centered on desktop */}
       {editingLesson && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-0 sm:p-4">
+          <div className="bg-white sm:rounded-lg shadow-xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col">
             {/* Modal Header */}
-            <div className="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div className="border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
               <input
                 type="text"
                 value={editingLesson.title}
                 onChange={(e) =>
                   handleTitleChange(editingLesson.id, e.target.value)
                 }
-                className="text-2xl font-semibold border-none outline-none focus:ring-0 flex-1"
+                className="text-lg sm:text-2xl font-semibold border-none outline-none focus:ring-0 flex-1 min-w-0"
                 placeholder="Lesson title..."
               />
               <Button
                 onClick={() => setEditingLesson(null)}
                 variant="outline"
                 size="sm"
+                className="shrink-0"
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
             {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <EditorWithPersistence
                 key={editingLesson.id}
                 entityType="lesson"
@@ -312,12 +308,14 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-gray-200 px-6 py-3 flex items-center justify-between">
-              <div className="text-sm text-gray-500">
+            <div className="border-t border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between">
+              <div className="text-xs sm:text-sm text-gray-500 truncate">
                 Created {formatDate(editingLesson.createdAt)}
               </div>
               {savingLessons.has(editingLesson.id) && (
-                <div className="text-sm text-blue-600">Saving...</div>
+                <div className="text-xs sm:text-sm text-blue-600 shrink-0 ml-2">
+                  Saving...
+                </div>
               )}
             </div>
           </div>
