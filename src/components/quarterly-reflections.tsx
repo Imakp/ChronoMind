@@ -128,6 +128,7 @@ export function QuarterlyReflections({
         {/* Editor */}
         <div className="flex-1 overflow-y-auto p-6">
           <EditorWithPersistence
+            key={`${yearId}-q${selectedQuarter}`}
             entityType="quarterlyReflection"
             entityId={currentReflection?.id || `${yearId}-q${selectedQuarter}`}
             initialContent={

@@ -389,6 +389,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
             </div>
             <div className="flex-1 p-6">
               <EditorWithPersistence
+                key={selectedChapter.id}
                 entityType="chapter"
                 entityId={selectedChapter.id}
                 initialContent={selectedChapter.content}

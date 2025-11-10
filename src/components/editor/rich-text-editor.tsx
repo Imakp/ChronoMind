@@ -68,9 +68,16 @@ export function RichTextEditor({
     },
   });
 
+  // Force editor content update when content prop changes
+  // Use JSON.stringify for deep comparison to detect actual content changes
   useEffect(() => {
-    if (editor && content !== editor.getJSON()) {
-      editor.commands.setContent(content || "");
+    if (!editor) return;
+
+    const currentContent = JSON.stringify(editor.getJSON());
+    const newContent = JSON.stringify(content || { type: "doc", content: [] });
+
+    if (currentContent !== newContent) {
+      editor.commands.setContent(content || { type: "doc", content: [] });
     }
   }, [content, editor]);
 

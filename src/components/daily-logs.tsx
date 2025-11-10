@@ -48,13 +48,18 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
   // Get or create a daily log for a specific date
   const handleDateSelect = async (date: Date) => {
-    const result = await getOrCreateDailyLog(yearId, date);
+    // Normalize date to midnight in local timezone before sending to server
+    const normalizedDate = new Date(date);
+    normalizedDate.setHours(0, 0, 0, 0);
+
+    const result = await getOrCreateDailyLog(yearId, normalizedDate);
     if (result.success && result.data) {
       setSelectedLog(result.data);
       // Update logs list if this is a new log
       const existingLog = logs.find(
         (log) =>
-          new Date(log.date).getTime() === new Date(result.data.date).getTime()
+          new Date(log.date).setHours(0, 0, 0, 0) ===
+          new Date(result.data.date).setHours(0, 0, 0, 0)
       );
       if (!existingLog) {
         setLogs((prev) =>
@@ -96,6 +101,9 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
     (content: any) => {
       if (!selectedLog) return;
 
+      // Update the selected log's content immediately in local state
+      setSelectedLog((prev) => (prev ? { ...prev, content } : null));
+
       // Clear existing timeout
       if (saveTimeout) {
         clearTimeout(saveTimeout);
@@ -104,7 +112,13 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
       // Set new timeout for auto-save
       const timeout = setTimeout(async () => {
         setIsSaving(true);
-        await updateDailyLog(selectedLog.id, content);
+        const result = await updateDailyLog(selectedLog.id, content);
+        if (result.success && result.data) {
+          // Update the log in the logs array
+          setLogs((prev) =>
+            prev.map((log) => (log.id === selectedLog.id ? result.data : log))
+          );
+        }
         setIsSaving(false);
       }, 1000); // Save after 1 second of inactivity
 
@@ -248,6 +262,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
               aria-labelledby="current-log-date"
             >
               <EditorWithPersistence
+                key={selectedLog.id}
                 entityType="dailyLog"
                 entityId={selectedLog.id}
                 initialContent={

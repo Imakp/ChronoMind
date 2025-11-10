@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { RichTextEditor } from "./rich-text-editor";
 import { createHighlight, getOrCreateTags } from "@/lib/actions";
 import { useSession } from "next-auth/react";
@@ -33,6 +33,11 @@ export function EditorWithPersistence({
   const { data: session } = useSession();
   const [content, setContent] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Reset content when entityId or initialContent changes
+  useEffect(() => {
+    setContent(initialContent);
+  }, [entityId, initialContent]);
 
   const handleContentChange = useCallback(
     (newContent: any) => {
