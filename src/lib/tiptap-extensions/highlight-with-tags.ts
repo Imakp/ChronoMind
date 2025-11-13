@@ -68,6 +68,9 @@ export const HighlightWithTags = Mark.create<HighlightWithTagsOptions>({
       {
         tag: "mark[data-tags]",
       },
+      {
+        tag: "mark[data-highlight-id]",
+      }
     ];
   },
 

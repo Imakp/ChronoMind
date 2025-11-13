@@ -1,10 +1,11 @@
 "use client";
 
-import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import { HighlightWithTags } from "@/lib/tiptap-extensions/highlight-with-tags";
-import { useState, useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { HighlightMenu } from "./highlight-menu";
+import { useHighlightManager } from "@/hooks/use-highlight-manager";
 import {
   Bold,
   Italic,
@@ -18,31 +19,22 @@ import { Button } from "@/components/ui/button";
 interface RichTextEditorProps {
   content: any;
   onChange: (content: any) => void;
-  onHighlight?: (highlightData: {
-    text: string;
-    tags: string[];
-    startOffset: number;
-    endOffset: number;
-  }) => void;
   placeholder?: string;
   editable?: boolean;
+  entityType: string;
+  entityId: string;
+  userId: string;
 }
 
 export function RichTextEditor({
   content,
   onChange,
-  onHighlight,
   placeholder = "Start writing...",
   editable = true,
+  entityType,
+  entityId,
+  userId,
 }: RichTextEditorProps) {
-  const [showHighlightMenu, setShowHighlightMenu] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
-  const [selectedText, setSelectedText] = useState("");
-  const [selectionRange, setSelectionRange] = useState<{
-    from: number;
-    to: number;
-  } | null>(null);
-
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -68,8 +60,11 @@ export function RichTextEditor({
     },
   });
 
+  // Use the highlight manager hook
+  const { menuState, handleSelection, applyTags, closeMenu } =
+    useHighlightManager(editor, { type: entityType, id: entityId }, userId);
+
   // Force editor content update when content prop changes
-  // Use JSON.stringify for deep comparison to detect actual content changes
   useEffect(() => {
     if (!editor) return;
 
@@ -81,62 +76,6 @@ export function RichTextEditor({
     }
   }, [content, editor]);
 
-  const handleHighlightClick = useCallback(() => {
-    if (!editor) return;
-
-    const { from, to } = editor.state.selection;
-    const text = editor.state.doc.textBetween(from, to, " ");
-
-    if (!text) return;
-
-    // Get cursor position for menu placement
-    const coords = editor.view.coordsAtPos(from);
-    setMenuPosition({
-      x: coords.left,
-      y: coords.bottom + 10,
-    });
-
-    setSelectedText(text);
-    setSelectionRange({ from, to });
-    setShowHighlightMenu(true);
-  }, [editor]);
-
-  const handleTagsAssign = useCallback(
-    (tags: string[]) => {
-      if (!editor || !selectionRange) return;
-
-      const { from, to } = selectionRange;
-      const text = editor.state.doc.textBetween(from, to, " ");
-
-      // Generate a unique ID for this highlight
-      const highlightId = `highlight-${Date.now()}-${Math.random()
-        .toString(36)
-        .substr(2, 9)}`;
-
-      // Apply the highlight mark with tags
-      editor
-        .chain()
-        .focus()
-        .setTextSelection({ from, to })
-        .setHighlight({ tags, id: highlightId })
-        .run();
-
-      // Notify parent component about the highlight
-      if (onHighlight) {
-        onHighlight({
-          text,
-          tags,
-          startOffset: from,
-          endOffset: to,
-        });
-      }
-
-      setShowHighlightMenu(false);
-      setSelectionRange(null);
-    },
-    [editor, selectionRange, onHighlight]
-  );
-
   if (!editor) {
     return null;
   }
@@ -144,7 +83,6 @@ export function RichTextEditor({
   return (
     <div className="relative border border-gray-300 rounded-lg bg-white">
       {editable && (
-        /* OPTIMIZATION: Added flex-wrap to allow toolbar to wrap on mobile */
         <div className="flex items-center flex-wrap gap-1 p-2 border-b border-gray-200 bg-gray-50">
           <Button
             onClick={() => editor.chain().focus().toggleBold().run()}
@@ -195,11 +133,9 @@ export function RichTextEditor({
           >
             <ListOrdered className="w-4 h-4" />
           </Button>
-          {/* OPTIMIZATION: Hide divider on mobile when wrapping, show on larger screens */}
           <div className="hidden sm:block w-px h-6 bg-gray-300 mx-1" />
-          {/* OPTIMIZATION: Make Highlight button full-width on mobile after wrap */}
           <Button
-            onClick={handleHighlightClick}
+            onClick={handleSelection}
             variant="outline"
             size="sm"
             className="h-8 px-2 sm:px-3 flex-1 sm:flex-initial"
@@ -212,14 +148,19 @@ export function RichTextEditor({
         </div>
       )}
 
-      <EditorContent editor={editor} />
+      <div
+        onMouseUp={handleSelection}
+        onKeyUp={handleSelection}
+      >
+        <EditorContent editor={editor} />
+      </div>
 
-      {showHighlightMenu && (
+      {menuState.isOpen && menuState.selection && (
         <HighlightMenu
-          position={menuPosition}
-          selectedText={selectedText}
-          onTagsAssign={handleTagsAssign}
-          onClose={() => setShowHighlightMenu(false)}
+          position={menuState.position}
+          selectedText={menuState.selection.text}
+          onTagsAssign={applyTags}
+          onClose={closeMenu}
         />
       )}
 
@@ -243,7 +184,6 @@ export function RichTextEditor({
           height: 0;
         }
 
-        /* OPTIMIZATION: Responsive prose styles for better mobile reading */
         @media (max-width: 640px) {
           .ProseMirror.prose {
             font-size: 15px;

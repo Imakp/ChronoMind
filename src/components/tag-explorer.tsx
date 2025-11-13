@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { getTags, getTaggedContentByTag } from "@/lib/actions";
 import type { TaggedContent, TagWithCount } from "@/types";
 import { Button } from "@/components/ui/button";
+import { ExternalLink } from "lucide-react";
+import Link from "next/link";
 
 interface TagExplorerProps {
   userId: string;
@@ -51,6 +53,28 @@ export function TagExplorer({ userId }: TagExplorerProps) {
     setTaggedContent([]);
   };
 
+  // Helper function to generate navigation URL based on entity type
+  const getSourceUrl = (source: TaggedContent["source"]) => {
+    if (!source) return null;
+
+    const { year, section } = source;
+
+    // Map section names to route paths
+    const sectionRoutes: Record<string, string> = {
+      "daily-logs": "daily-logs",
+      "quarterly-reflections": "quarterly-reflections",
+      "yearly-goals": "yearly-goals",
+      "book-notes": "book-notes",
+      "lessons-learned": "lessons-learned",
+      "creative-dump": "creative-dump",
+    };
+
+    const route = sectionRoutes[section];
+    if (!route) return null;
+
+    return `/year/${year}/${route}`;
+  };
+
   const filteredTags = tags.filter((tag) =>
     tag.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -60,20 +84,25 @@ export function TagExplorer({ userId }: TagExplorerProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <p className="text-gray-500">Loading tags...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="text-gray-500">Loading tags...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {!selectedTag ? (
         <>
           {/* Tag List View */}
           <div className="space-y-4">
             <div>
-              <h2 className="text-2xl font-bold mb-2">Tag Explorer</h2>
-              <p className="text-gray-600">
+              <h2 className="text-xl sm:text-2xl font-bold mb-2">
+                Tag Explorer
+              </h2>
+              <p className="text-sm sm:text-base text-gray-600">
                 Explore all your tagged content across years and sections
               </p>
             </div>
@@ -85,7 +114,7 @@ export function TagExplorer({ userId }: TagExplorerProps) {
                 placeholder="Search tags..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
@@ -99,7 +128,7 @@ export function TagExplorer({ userId }: TagExplorerProps) {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {filteredTags.map((tag) => (
                   <button
                     key={tag.id}
@@ -107,8 +136,10 @@ export function TagExplorer({ userId }: TagExplorerProps) {
                     className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all text-left"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-lg">#{tag.name}</span>
-                      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      <span className="font-medium text-base sm:text-lg">
+                        #{tag.name}
+                      </span>
+                      <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
                         {tag.highlightCount}
                       </span>
                     </div>
@@ -122,13 +153,15 @@ export function TagExplorer({ userId }: TagExplorerProps) {
         <>
           {/* Tagged Content View */}
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <Button onClick={handleBackToTags} variant="outline">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+              <Button onClick={handleBackToTags} variant="outline" size="sm">
                 ← Back to Tags
               </Button>
               <div>
-                <h2 className="text-2xl font-bold">#{selectedTagData?.name}</h2>
-                <p className="text-gray-600">
+                <h2 className="text-xl sm:text-2xl font-bold">
+                  #{selectedTagData?.name}
+                </h2>
+                <p className="text-sm sm:text-base text-gray-600">
                   {taggedContent.length} highlight
                   {taggedContent.length !== 1 ? "s" : ""}
                 </p>
@@ -137,7 +170,10 @@ export function TagExplorer({ userId }: TagExplorerProps) {
 
             {contentLoading ? (
               <div className="flex items-center justify-center p-8">
-                <p className="text-gray-500">Loading content...</p>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <p className="text-gray-500">Loading content...</p>
+                </div>
               </div>
             ) : taggedContent.length === 0 ? (
               <div className="text-center py-12">
@@ -150,16 +186,16 @@ export function TagExplorer({ userId }: TagExplorerProps) {
                     key={content.id}
                     className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
                   >
-                    {/* Highlighted Text */}
+                    {/* Highlighted Text - Uses database snapshot */}
                     <div className="mb-3">
-                      <p className="text-lg italic text-gray-700 bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
+                      <p className="text-base sm:text-lg italic text-gray-700 bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
                         "{content.text}"
                       </p>
                     </div>
 
-                    {/* Source Information */}
+                    {/* Source Information with Navigation */}
                     {content.source && (
-                      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600 mb-3">
                         <span className="font-medium">
                           {content.source.year}
                         </span>
@@ -167,13 +203,33 @@ export function TagExplorer({ userId }: TagExplorerProps) {
                         <span className="capitalize">
                           {content.source.section.replace(/-/g, " ")}
                         </span>
-                        <span>•</span>
-                        <span>{content.source.itemTitle}</span>
+                        {content.source.itemTitle && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate max-w-[200px]">
+                              {content.source.itemTitle}
+                            </span>
+                          </>
+                        )}
+
+                        {/* Navigate to Source Button */}
+                        {getSourceUrl(content.source) && (
+                          <>
+                            <span>•</span>
+                            <Link
+                              href={getSourceUrl(content.source)!}
+                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                              <span>View Source</span>
+                              <ExternalLink className="w-3 h-3" />
+                            </Link>
+                          </>
+                        )}
                       </div>
                     )}
 
                     {/* Tags */}
-                    <div className="flex flex-wrap gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mb-2">
                       {content.tags.map((tag) => (
                         <span
                           key={tag.id}
@@ -185,8 +241,13 @@ export function TagExplorer({ userId }: TagExplorerProps) {
                     </div>
 
                     {/* Date */}
-                    <div className="text-xs text-gray-400 mt-2">
-                      {new Date(content.createdAt).toLocaleDateString()}
+                    <div className="text-xs text-gray-400">
+                      Created{" "}
+                      {new Date(content.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
                     </div>
                   </div>
                 ))}

@@ -941,16 +941,18 @@ export async function createHighlight(
   text: string,
   startOffset: number,
   endOffset: number,
+  tiptapId: string,
   tagIds?: string[]
 ) {
   try {
-    // Validate input
+    // Validate input (including tiptapId)
     const validated = createHighlightSchema.parse({
       entityType,
       entityId,
       text,
       startOffset,
       endOffset,
+      tiptapId,
       tagIds,
     });
 
@@ -962,11 +964,12 @@ export async function createHighlight(
       };
     }
 
-    // Create the base data object
+    // Build data object for Prisma
     const data: any = {
       text: validated.text,
       startOffset: validated.startOffset,
       endOffset: validated.endOffset,
+      tiptapId: validated.tiptapId,
       tags:
         validated.tagIds && validated.tagIds.length > 0
           ? {
@@ -975,7 +978,7 @@ export async function createHighlight(
           : undefined,
     };
 
-    // Add the appropriate entity relation
+    // Dynamically add the related entity field
     switch (validated.entityType) {
       case "dailyLog":
         data.dailyLogId = validated.entityId;
@@ -1196,7 +1199,7 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
     });
 
     // Transform highlights into tagged content with source information
-    const taggedContent = highlights.map((highlight) => {
+    const taggedContent = highlights.map((highlight: any) => {
       type SectionType =
         | "daily-logs"
         | "quarterly-reflections"
@@ -1272,6 +1275,7 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
 
       return {
         id: highlight.id,
+        tiptapId: highlight.tiptapId,
         text: highlight.text,
         source,
         createdAt: highlight.createdAt,
@@ -1369,7 +1373,7 @@ export async function getAllTaggedContent(userId: string) {
 
     // Transform into a more usable format
     const taggedContentByTag = tags.map((tag) => {
-      const content = tag.highlights.map((highlight) => {
+      const content = tag.highlights.map((highlight: any) => {
         type SectionType =
           | "daily-logs"
           | "quarterly-reflections"
@@ -1445,6 +1449,7 @@ export async function getAllTaggedContent(userId: string) {
 
         return {
           id: highlight.id,
+          tiptapId: highlight.tiptapId,
           text: highlight.text,
           source,
           createdAt: highlight.createdAt,

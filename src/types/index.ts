@@ -67,6 +67,7 @@ export type ContentSource = {
 
 export type TaggedContent = {
   id: string;
+  tiptapId: string;
   text: string;
   source: ContentSource | null;
   createdAt: Date;

@@ -12,6 +12,10 @@ interface HighlightMenuProps {
   onClose: () => void;
 }
 
+/**
+ * Purely presentational component for tagging highlighted text.
+ * All business logic (persistence, state management) is handled by the parent.
+ */
 export function HighlightMenu({
   position,
   selectedText,
@@ -39,7 +43,7 @@ export function HighlightMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  // OPTIMIZATION: Adjust menu position to prevent off-screen rendering
+  // Adjust menu position to prevent off-screen rendering
   useEffect(() => {
     if (!menuRef.current) return;
 
@@ -90,18 +94,19 @@ export function HighlightMenu({
   return (
     <div
       ref={menuRef}
-      /* OPTIMIZATION: Changed min-w-[300px] to w-[280px] max-w-[95vw] for mobile */
       className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-3 sm:p-4 w-[280px] max-w-[95vw]"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
       }}
     >
-      {/* OPTIMIZATION: More compact header on mobile */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-2 sm:mb-3">
         <div className="flex items-center gap-1.5 sm:gap-2">
           <TagIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
-          <h3 className="text-xs sm:text-sm font-semibold text-gray-900">Tag Highlight</h3>
+          <h3 className="text-xs sm:text-sm font-semibold text-gray-900">
+            Tag Highlight
+          </h3>
         </div>
         <button
           onClick={onClose}
@@ -112,14 +117,14 @@ export function HighlightMenu({
         </button>
       </div>
 
-      {/* OPTIMIZATION: Smaller text preview on mobile */}
+      {/* Selected text preview */}
       <div className="mb-2 sm:mb-3">
         <p className="text-xs text-gray-600 line-clamp-2 break-words">
           &quot;{selectedText}&quot;
         </p>
       </div>
 
-      {/* OPTIMIZATION: Smaller tag badges on mobile */}
+      {/* Tag list */}
       <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-3 min-h-[28px] sm:min-h-[32px]">
         {tags.map((tag) => (
           <span
@@ -138,7 +143,7 @@ export function HighlightMenu({
         ))}
       </div>
 
-      {/* OPTIMIZATION: Compact input and button on mobile */}
+      {/* Tag input */}
       <div className="flex gap-1.5 sm:gap-2 mb-2 sm:mb-3">
         <input
           ref={inputRef}
@@ -160,18 +165,18 @@ export function HighlightMenu({
         </Button>
       </div>
 
-      {/* OPTIMIZATION: Full-width buttons on mobile */}
+      {/* Action buttons */}
       <div className="flex flex-col sm:flex-row justify-end gap-1.5 sm:gap-2">
-        <Button 
-          onClick={onClose} 
-          size="sm" 
+        <Button
+          onClick={onClose}
+          size="sm"
           variant="outline"
           className="w-full sm:w-auto order-2 sm:order-1"
         >
           Cancel
         </Button>
-        <Button 
-          onClick={handleSave} 
+        <Button
+          onClick={handleSave}
           size="sm"
           className="w-full sm:w-auto order-1 sm:order-2"
         >

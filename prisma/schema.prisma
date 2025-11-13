@@ -227,6 +227,7 @@ model Tag {
 
 model Highlight {
   id          String @id @default(cuid())
+  tiptapId    String @unique
   text        String
   startOffset Int
   endOffset   Int

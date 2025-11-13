@@ -175,6 +175,7 @@ export const createHighlightSchema = z.object({
     "creativeNote",
   ]),
   entityId: z.string().min(1, "Entity ID is required"),
+  tiptapId: z.string().min(1, "Tiptap ID is required"),
   text: z
     .string()
     .min(1, "Text is required")
@@ -213,7 +214,6 @@ export const getOrCreateTagsSchema = z.object({
 
 // Helper function to sanitize HTML content
 export function sanitizeHtml(html: string): string {
-  // Remove script tags and event handlers
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/on\w+\s*=\s*["'][^"']*["']/gi, "")
@@ -226,7 +226,6 @@ export function sanitizeTiptapContent(content: any): any {
     return { type: "doc", content: [] };
   }
 
-  // Recursively sanitize text content
   const sanitizeNode = (node: any): any => {
     if (!node || typeof node !== "object") return node;
 
@@ -237,7 +236,6 @@ export function sanitizeTiptapContent(content: any): any {
     }
 
     if (node.text && typeof node.text === "string") {
-      // Remove any potential XSS vectors from text
       sanitized.text = node.text
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
         .replace(/javascript:/gi, "");
