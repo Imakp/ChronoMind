@@ -197,7 +197,11 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
       <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <h2 className="text-xl sm:text-2xl font-semibold">Lessons Learned</h2>
-          <Button onClick={handleCreateLesson} size="sm" className="w-full sm:w-auto">
+          <Button
+            onClick={handleCreateLesson}
+            size="sm"
+            className="w-full sm:w-auto"
+          >
             <Plus className="w-4 h-4 mr-2" />
             New Lesson
           </Button>
@@ -300,6 +304,7 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
                 initialContent={
                   editingLesson.content || { type: "doc", content: [] }
                 }
+                highlights={(editingLesson as any).highlights || []}
                 onContentChange={(content) =>
                   handleContentChange(editingLesson.id, content)
                 }

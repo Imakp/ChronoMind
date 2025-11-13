@@ -334,6 +334,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                 initialContent={
                   selectedLog.content || { type: "doc", content: [] }
                 }
+                highlights={(selectedLog as any).highlights || []}
                 onContentChange={handleContentChange}
                 placeholder="What happened today?"
               />

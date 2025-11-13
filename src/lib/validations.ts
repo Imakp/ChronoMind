@@ -1,18 +1,29 @@
 import { z } from "zod";
 
-// Tiptap content validation
-export const tiptapContentSchema = z.object({
-  type: z.literal("doc"),
-  content: z
-    .array(
-      z.object({
+// Tiptap content validation - Recursive schema that handles blocks AND text nodes
+const tiptapNodeSchema: z.ZodType<any> = z.lazy(
+  () =>
+    z
+      .object({
         type: z.string(),
-        content: z.any().optional(),
-        attrs: z.any().optional(),
+        // Allow marks (bold, italic, highlight)
+        marks: z.array(z.any()).optional(),
+        // Allow attributes (links, headings, custom data)
+        attrs: z.record(z.string(), z.any()).optional(),
+        // Allow text content (for text nodes)
+        text: z.string().optional(),
+        // Recursive content (for block nodes)
+        content: z.array(tiptapNodeSchema).optional(),
       })
-    )
-    .optional(),
-});
+      .loose() // UPDATED: Used .loose() instead of .passthrough() to fix deprecation
+);
+
+export const tiptapContentSchema = z
+  .object({
+    type: z.literal("doc"),
+    content: z.array(tiptapNodeSchema).optional(),
+  })
+  .loose(); // UPDATED: Used .loose() instead of .passthrough()
 
 // Year validation
 export const createYearSchema = z.object({
@@ -231,14 +242,38 @@ export function sanitizeTiptapContent(content: any): any {
 
     const sanitized = { ...node };
 
+    // Preserve content array (recursive)
     if (node.content && Array.isArray(node.content)) {
       sanitized.content = node.content.map(sanitizeNode);
     }
 
+    // Preserve and sanitize text
     if (node.text && typeof node.text === "string") {
       sanitized.text = node.text
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
         .replace(/javascript:/gi, "");
+    }
+
+    // CRITICAL FIX: Preserve marks array (bold, italic, highlight, etc.)
+    if (node.marks && Array.isArray(node.marks)) {
+      sanitized.marks = node.marks.map((mark: any) => {
+        if (!mark || typeof mark !== "object") return mark;
+
+        // Preserve mark type and attributes
+        const sanitizedMark: any = { type: mark.type };
+
+        // Preserve mark attributes (needed for highlights, links, etc.)
+        if (mark.attrs && typeof mark.attrs === "object") {
+          sanitizedMark.attrs = { ...mark.attrs };
+        }
+
+        return sanitizedMark;
+      });
+    }
+
+    // Preserve attributes (needed for headings, lists, etc.)
+    if (node.attrs && typeof node.attrs === "object") {
+      sanitized.attrs = { ...node.attrs };
     }
 
     return sanitized;

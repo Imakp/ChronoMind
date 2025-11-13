@@ -39,6 +39,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
     id: string;
     title: string;
     content: any;
+    highlights?: any[];
   } | null>(null);
   const [newGenreName, setNewGenreName] = useState("");
   const [newBookTitle, setNewBookTitle] = useState<{ [key: string]: string }>(
@@ -103,6 +104,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
       id: chapter.id,
       title: chapter.title,
       content: chapter.content || { type: "doc", content: [] },
+      highlights: chapter.highlights || [],
     });
     // OPTIMIZATION: Hide sidebar on mobile when chapter is selected
     setShowMobileSidebar(false);
@@ -181,14 +183,14 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
       <div
         className={`
           md:hidden fixed inset-0 z-50 bg-black bg-opacity-50 transition-opacity
-          ${showMobileSidebar ? 'opacity-100' : 'opacity-0 pointer-events-none'}
+          ${showMobileSidebar ? "opacity-100" : "opacity-0 pointer-events-none"}
         `}
         onClick={() => setShowMobileSidebar(false)}
       >
         <div
           className={`
             w-[85%] max-w-sm h-full bg-gray-50 shadow-xl transform transition-transform
-            ${showMobileSidebar ? 'translate-x-0' : '-translate-x-full'}
+            ${showMobileSidebar ? "translate-x-0" : "-translate-x-full"}
           `}
           onClick={(e) => e.stopPropagation()}
         >
@@ -204,7 +206,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           {/* Mobile sidebar content */}
           <div className="overflow-y-auto h-[calc(100%-64px)] p-3">
             {/* Create New Genre */}
@@ -289,7 +291,8 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                 })
                               }
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") handleCreateBook(genre.id);
+                                if (e.key === "Enter")
+                                  handleCreateBook(genre.id);
                               }}
                               placeholder="Add book..."
                               className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -361,8 +364,12 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                     />
                                     <Button
                                       size="sm"
-                                      onClick={() => handleCreateChapter(book.id)}
-                                      disabled={!newChapterTitle[book.id]?.trim()}
+                                      onClick={() =>
+                                        handleCreateChapter(book.id)
+                                      }
+                                      disabled={
+                                        !newChapterTitle[book.id]?.trim()
+                                      }
                                     >
                                       <Plus className="w-3 h-3" />
                                     </Button>
@@ -379,7 +386,9 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                       }`}
                                     >
                                       <button
-                                        onClick={() => handleChapterClick(chapter)}
+                                        onClick={() =>
+                                          handleChapterClick(chapter)
+                                        }
                                         className="flex-1 text-left truncate"
                                       >
                                         {chapter.title}
@@ -589,7 +598,9 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                                     }`}
                                   >
                                     <button
-                                      onClick={() => handleChapterClick(chapter)}
+                                      onClick={() =>
+                                        handleChapterClick(chapter)
+                                      }
                                       className="flex-1 text-left truncate"
                                     >
                                       {chapter.title}
@@ -644,6 +655,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                 entityType="chapter"
                 entityId={selectedChapter.id}
                 initialContent={selectedChapter.content}
+                highlights={(selectedChapter as any).highlights || []}
                 onContentChange={handleChapterSave}
                 placeholder="Write your chapter notes here..."
               />

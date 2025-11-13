@@ -168,16 +168,19 @@ export async function getOrCreateDailyLog(yearId: string, date: Date) {
 
 export async function updateDailyLog(logId: string, content: TiptapContent) {
   try {
+    // Validate and sanitize using the schema
+    const validated = updateDailyLogSchema.parse({ logId, content });
+    const sanitizedContent = sanitizeTiptapContent(validated.content);
+
     const updatedLog = await db.dailyLog.update({
-      where: { id: logId },
-      data: { content: content as Prisma.InputJsonValue },
+      where: { id: validated.logId },
+      data: { content: sanitizedContent as Prisma.InputJsonValue },
     });
 
     revalidatePath("/");
     return { success: true, data: updatedLog };
   } catch (error) {
-    console.error("Error updating daily log:", error);
-    return { success: false, error: "Failed to update daily log" };
+    return handleActionError(error);
   }
 }
 
@@ -209,28 +212,35 @@ export async function updateQuarterlyReflection(
   content: TiptapContent
 ) {
   try {
+    // Validate and sanitize using the schema
+    const validated = updateQuarterlyReflectionSchema.parse({
+      yearId,
+      quarter,
+      content,
+    });
+    const sanitizedContent = sanitizeTiptapContent(validated.content);
+
     const reflection = await db.quarterlyReflection.upsert({
       where: {
         yearId_quarter: {
-          yearId,
-          quarter,
+          yearId: validated.yearId,
+          quarter: validated.quarter,
         },
       },
       update: {
-        content: content as Prisma.InputJsonValue,
+        content: sanitizedContent as Prisma.InputJsonValue,
       },
       create: {
-        yearId,
-        quarter,
-        content: content as Prisma.InputJsonValue,
+        yearId: validated.yearId,
+        quarter: validated.quarter,
+        content: sanitizedContent as Prisma.InputJsonValue,
       },
     });
 
     revalidatePath("/");
     return { success: true, data: reflection };
   } catch (error) {
-    console.error("Error updating quarterly reflection:", error);
-    return { success: false, error: "Failed to update quarterly reflection" };
+    return handleActionError(error);
   }
 }
 
@@ -636,11 +646,17 @@ export async function createChapter(
   content?: TiptapContent
 ) {
   try {
+    // Validate and sanitize input
+    const validated = createChapterSchema.parse({ bookId, title, content });
+    const sanitizedContent = validated.content
+      ? sanitizeTiptapContent(validated.content)
+      : undefined;
+
     const chapter = await db.chapter.create({
       data: {
-        title,
-        content: content as Prisma.InputJsonValue,
-        bookId,
+        title: validated.title,
+        content: sanitizedContent as Prisma.InputJsonValue,
+        bookId: validated.bookId,
       },
       include: {
         highlights: {
@@ -654,23 +670,25 @@ export async function createChapter(
     revalidatePath("/");
     return { success: true, data: chapter };
   } catch (error) {
-    console.error("Error creating chapter:", error);
-    return { success: false, error: "Failed to create chapter" };
+    return handleActionError(error);
   }
 }
 
 export async function updateChapter(chapterId: string, content: TiptapContent) {
   try {
+    // Validate and sanitize using the schema
+    const validated = updateChapterSchema.parse({ chapterId, content });
+    const sanitizedContent = sanitizeTiptapContent(validated.content);
+
     const chapter = await db.chapter.update({
-      where: { id: chapterId },
-      data: { content: content as Prisma.InputJsonValue },
+      where: { id: validated.chapterId },
+      data: { content: sanitizedContent as Prisma.InputJsonValue },
     });
 
     revalidatePath("/");
     return { success: true, data: chapter };
   } catch (error) {
-    console.error("Error updating chapter:", error);
-    return { success: false, error: "Failed to update chapter" };
+    return handleActionError(error);
   }
 }
 
@@ -851,10 +869,16 @@ export async function createCreativeNote(
   content?: TiptapContent
 ) {
   try {
+    // Validate and sanitize input
+    const validated = createCreativeNoteSchema.parse({ yearId, content });
+    const sanitizedContent = validated.content
+      ? sanitizeTiptapContent(validated.content)
+      : undefined;
+
     const note = await db.creativeNote.create({
       data: {
-        content: content as Prisma.InputJsonValue,
-        yearId,
+        content: sanitizedContent as Prisma.InputJsonValue,
+        yearId: validated.yearId,
       },
       include: {
         highlights: {
@@ -868,8 +892,7 @@ export async function createCreativeNote(
     revalidatePath("/");
     return { success: true, data: note };
   } catch (error) {
-    console.error("Error creating creative note:", error);
-    return { success: false, error: "Failed to create creative note" };
+    return handleActionError(error);
   }
 }
 
@@ -878,16 +901,19 @@ export async function updateCreativeNote(
   content: TiptapContent
 ) {
   try {
+    // Validate and sanitize using the schema
+    const validated = updateCreativeNoteSchema.parse({ noteId, content });
+    const sanitizedContent = sanitizeTiptapContent(validated.content);
+
     const note = await db.creativeNote.update({
-      where: { id: noteId },
-      data: { content: content as Prisma.InputJsonValue },
+      where: { id: validated.noteId },
+      data: { content: sanitizedContent as Prisma.InputJsonValue },
     });
 
     revalidatePath("/");
     return { success: true, data: note };
   } catch (error) {
-    console.error("Error updating creative note:", error);
-    return { success: false, error: "Failed to update creative note" };
+    return handleActionError(error);
   }
 }
 

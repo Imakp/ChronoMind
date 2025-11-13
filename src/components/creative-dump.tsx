@@ -160,7 +160,11 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
               Quick capture for spontaneous thoughts and ideas
             </p>
           </div>
-          <Button onClick={handleCreateNote} size="sm" className="w-full sm:w-auto shrink-0">
+          <Button
+            onClick={handleCreateNote}
+            size="sm"
+            className="w-full sm:w-auto shrink-0"
+          >
             <Plus className="w-4 h-4 mr-2" />
             New Note
           </Button>
@@ -243,6 +247,7 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
                 initialContent={
                   editingNote.content || { type: "doc", content: [] }
                 }
+                highlights={(editingNote as any).highlights || []}
                 onContentChange={(content) =>
                   handleContentChange(editingNote.id, content)
                 }

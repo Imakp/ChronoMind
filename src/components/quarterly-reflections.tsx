@@ -162,6 +162,7 @@ export function QuarterlyReflections({
             initialContent={
               currentReflection?.content || { type: "doc", content: [] }
             }
+            highlights={(currentReflection as any)?.highlights || []}
             onContentChange={handleContentChange}
             placeholder={`Reflect on your ${QUARTERS[
               selectedQuarter - 1

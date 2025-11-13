@@ -19,6 +19,7 @@ interface EditorWithPersistenceProps {
   onContentChange: (content: any) => void;
   placeholder?: string;
   editable?: boolean;
+  highlights?: any[]; // ADD: Accept highlights from parent
 }
 
 export function EditorWithPersistence({
@@ -28,6 +29,7 @@ export function EditorWithPersistence({
   onContentChange,
   placeholder,
   editable = true,
+  highlights = [], // ADD: Default to empty array
 }: EditorWithPersistenceProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState(initialContent);
@@ -55,6 +57,7 @@ export function EditorWithPersistence({
         entityType={entityType}
         entityId={entityId}
         userId={session?.user?.id || ""}
+        highlights={highlights} // PASS: Forward highlights to RichTextEditor
       />
     </div>
   );
