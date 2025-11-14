@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   createGoal,
@@ -35,7 +36,6 @@ interface YearlyGoalsProps {
 
 export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
   const [goals, setGoals] = useState<GoalWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   const [editingGoal, setEditingGoal] = useState<string | null>(null);
@@ -49,18 +49,18 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
   const [newSubTaskTitle, setNewSubTaskTitle] = useState<{
     [key: string]: string;
   }>({});
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     loadGoals();
   }, [yearId]);
 
   const loadGoals = async () => {
-    setLoading(true);
     const result = await getGoals(yearId);
     if (result.success && result.data) {
       setGoals(result.data);
     }
-    setLoading(false);
   };
 
   const handleCreateGoal = async () => {
@@ -69,14 +69,16 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
       return;
     }
 
-    const result = await createGoal(yearId, newGoalTitle.trim());
-    if (result.success) {
-      setNewGoalTitle("");
-      await loadGoals();
-      toast.success("Goal created successfully");
-    } else {
-      toast.error(getUserFriendlyError(result.error));
-    }
+    startTransition(async () => {
+      const result = await createGoal(yearId, newGoalTitle.trim());
+      if (result.success) {
+        setNewGoalTitle("");
+        router.refresh();
+        toast.success("Goal created successfully");
+      } else {
+        toast.error(getUserFriendlyError(result.error));
+      }
+    });
   };
 
   const handleCreateTask = async (goalId: string) => {
@@ -86,43 +88,51 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
       return;
     }
 
-    const result = await createTask(goalId, title.trim());
-    if (result.success) {
-      setNewTaskTitle({ ...newTaskTitle, [goalId]: "" });
-      await loadGoals();
-      toast.success("Task created successfully");
-    } else {
-      toast.error(getUserFriendlyError(result.error));
-    }
+    startTransition(async () => {
+      const result = await createTask(goalId, title.trim());
+      if (result.success) {
+        setNewTaskTitle({ ...newTaskTitle, [goalId]: "" });
+        router.refresh();
+        toast.success("Task created successfully");
+      } else {
+        toast.error(getUserFriendlyError(result.error));
+      }
+    });
   };
 
   const handleCreateSubTask = async (taskId: string) => {
     const title = newSubTaskTitle[taskId];
     if (!title?.trim()) return;
 
-    const result = await createSubTask(taskId, title.trim());
-    if (result.success) {
-      setNewSubTaskTitle({ ...newSubTaskTitle, [taskId]: "" });
-      await loadGoals();
-    }
+    startTransition(async () => {
+      const result = await createSubTask(taskId, title.trim());
+      if (result.success) {
+        setNewSubTaskTitle({ ...newSubTaskTitle, [taskId]: "" });
+        router.refresh();
+      }
+    });
   };
 
   const handleToggleSubTask = async (subtaskId: string) => {
-    await toggleSubTask(subtaskId);
-    await loadGoals();
+    startTransition(async () => {
+      await toggleSubTask(subtaskId);
+      router.refresh();
+    });
   };
 
   const handleDeleteGoal = async (goalId: string) => {
     if (
       confirm("Are you sure you want to delete this goal and all its tasks?")
     ) {
-      const result = await deleteGoal(goalId);
-      if (result.success) {
-        await loadGoals();
-        toast.success("Goal deleted successfully");
-      } else {
-        toast.error(getUserFriendlyError(result.error));
-      }
+      startTransition(async () => {
+        const result = await deleteGoal(goalId);
+        if (result.success) {
+          router.refresh();
+          toast.success("Goal deleted successfully");
+        } else {
+          toast.error(getUserFriendlyError(result.error));
+        }
+      });
     }
   };
 
@@ -130,15 +140,19 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
     if (
       confirm("Are you sure you want to delete this task and all its subtasks?")
     ) {
-      await deleteTask(taskId);
-      await loadGoals();
+      startTransition(async () => {
+        await deleteTask(taskId);
+        router.refresh();
+      });
     }
   };
 
   const handleDeleteSubTask = async (subtaskId: string) => {
     if (confirm("Are you sure you want to delete this subtask?")) {
-      await deleteSubTask(subtaskId);
-      await loadGoals();
+      startTransition(async () => {
+        await deleteSubTask(subtaskId);
+        router.refresh();
+      });
     }
   };
 
@@ -162,31 +176,37 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
       toast.error("Goal title cannot be empty");
       return;
     }
-    const result = await updateGoal(goalId, editValue.trim());
-    if (result.success) {
-      setEditingGoal(null);
-      setEditValue("");
-      await loadGoals();
-      toast.success("Goal updated successfully");
-    } else {
-      toast.error(getUserFriendlyError(result.error));
-    }
+    startTransition(async () => {
+      const result = await updateGoal(goalId, editValue.trim());
+      if (result.success) {
+        setEditingGoal(null);
+        setEditValue("");
+        router.refresh();
+        toast.success("Goal updated successfully");
+      } else {
+        toast.error(getUserFriendlyError(result.error));
+      }
+    });
   };
 
   const saveEditTask = async (taskId: string) => {
     if (!editValue.trim()) return;
-    await updateTask(taskId, editValue.trim());
-    setEditingTask(null);
-    setEditValue("");
-    await loadGoals();
+    startTransition(async () => {
+      await updateTask(taskId, editValue.trim());
+      setEditingTask(null);
+      setEditValue("");
+      router.refresh();
+    });
   };
 
   const saveEditSubTask = async (subtaskId: string) => {
     if (!editValue.trim()) return;
-    await updateSubTask(subtaskId, editValue.trim());
-    setEditingSubTask(null);
-    setEditValue("");
-    await loadGoals();
+    startTransition(async () => {
+      await updateSubTask(subtaskId, editValue.trim());
+      setEditingSubTask(null);
+      setEditValue("");
+      router.refresh();
+    });
   };
 
   const cancelEdit = () => {
@@ -223,17 +243,6 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
     return "bg-green-500";
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <div className="text-gray-500">Loading goals...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     /* OPTIMIZATION: Responsive padding - p-4 on mobile, p-6 on larger screens */
     <div className="h-full overflow-y-auto p-4 sm:p-6">
@@ -260,8 +269,8 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
               placeholder="Add a new goal..."
               className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <Button 
-              onClick={handleCreateGoal} 
+            <Button
+              onClick={handleCreateGoal}
               disabled={!newGoalTitle.trim()}
               className="w-full sm:w-auto"
             >

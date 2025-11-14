@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserYears } from "@/lib/actions";
-import Navbar from "@/components/navigation/navbar";
 import YearDashboard from "@/components/year-dashboard";
 
 interface YearPageProps {
@@ -40,7 +39,6 @@ export default async function YearPage({ params }: YearPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <YearDashboard year={userYear} userId={session.user.id} />
       </main>

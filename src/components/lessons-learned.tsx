@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Lesson } from "@prisma/client";
 import { EditorWithPersistence } from "./editor";
 import {
@@ -21,9 +22,10 @@ interface LessonsLearnedProps {
 
 export function LessonsLearned({ yearId }: LessonsLearnedProps) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [savingLessons, setSavingLessons] = useState<Set<string>>(new Set());
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   // Use refs to store timeouts and avoid stale closures
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -40,43 +42,45 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
   }, [yearId]);
 
   const loadLessons = async () => {
-    setIsLoading(true);
     const result = await getLessons(yearId);
     if (result.success && result.data) {
       setLessons(result.data);
     }
-    setIsLoading(false);
   };
 
   // Create a new lesson
   const handleCreateLesson = async () => {
-    const result = await createLesson(yearId, "Untitled Lesson", {
-      type: "doc",
-      content: [],
+    startTransition(async () => {
+      const result = await createLesson(yearId, "Untitled Lesson", {
+        type: "doc",
+        content: [],
+      });
+      if (result.success && result.data) {
+        router.refresh();
+        setEditingLesson(result.data);
+        toast.success("Lesson created successfully");
+      } else {
+        toast.error(getUserFriendlyError(result.error));
+      }
     });
-    if (result.success && result.data) {
-      setLessons((prev) => [result.data, ...prev]);
-      setEditingLesson(result.data);
-      toast.success("Lesson created successfully");
-    } else {
-      toast.error(getUserFriendlyError(result.error));
-    }
   };
 
   // Delete a lesson
   const handleDeleteLesson = async (lessonId: string) => {
     if (!confirm("Are you sure you want to delete this lesson?")) return;
 
-    const result = await deleteLesson(lessonId);
-    if (result.success) {
-      setLessons((prev) => prev.filter((lesson) => lesson.id !== lessonId));
-      if (editingLesson?.id === lessonId) {
-        setEditingLesson(null);
+    startTransition(async () => {
+      const result = await deleteLesson(lessonId);
+      if (result.success) {
+        if (editingLesson?.id === lessonId) {
+          setEditingLesson(null);
+        }
+        router.refresh();
+        toast.success("Lesson deleted successfully");
+      } else {
+        toast.error(getUserFriendlyError(result.error));
       }
-      toast.success("Lesson deleted successfully");
-    } else {
-      toast.error(getUserFriendlyError(result.error));
-    }
+    });
   };
 
   // Auto-save functionality for title
@@ -179,17 +183,6 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
       year: "numeric",
     });
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <div className="text-gray-500">Loading lessons...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col">

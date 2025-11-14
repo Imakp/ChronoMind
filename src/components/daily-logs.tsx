@@ -19,7 +19,6 @@ interface DailyLogsProps {
 export function DailyLogs({ yearId, year }: DailyLogsProps) {
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [selectedLog, setSelectedLog] = useState<DailyLog | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -29,7 +28,6 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
   }, [yearId]);
 
   const loadLogs = async () => {
-    setIsLoading(true);
     const result = await getDailyLogs(yearId);
     if (result.success && result.data) {
       setLogs(result.data);
@@ -43,7 +41,6 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
         setSelectedLog(todayLog || result.data[0]);
       }
     }
-    setIsLoading(false);
   };
 
   // Get or create a daily log for a specific date
@@ -156,24 +153,6 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
       year: "numeric",
     });
   };
-
-  if (isLoading) {
-    return (
-      <div
-        className="flex items-center justify-center h-64"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="flex flex-col items-center gap-3">
-          <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"
-            aria-hidden="true"
-          ></div>
-          <div className="text-gray-500">Loading daily logs...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full">

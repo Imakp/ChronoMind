@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CreativeNote } from "@prisma/client";
 import { EditorWithPersistence } from "./editor";
 import {
@@ -19,9 +20,10 @@ interface CreativeDumpProps {
 
 export function CreativeDump({ yearId }: CreativeDumpProps) {
   const [notes, setNotes] = useState<CreativeNote[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [editingNote, setEditingNote] = useState<CreativeNote | null>(null);
   const [savingNotes, setSavingNotes] = useState<Set<string>>(new Set());
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   // Use refs to store timeouts and avoid stale closures
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
@@ -38,37 +40,39 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
   }, [yearId]);
 
   const loadNotes = async () => {
-    setIsLoading(true);
     const result = await getCreativeNotes(yearId);
     if (result.success && result.data) {
       setNotes(result.data);
     }
-    setIsLoading(false);
   };
 
   // Create a new creative note
   const handleCreateNote = async () => {
-    const result = await createCreativeNote(yearId, {
-      type: "doc",
-      content: [],
+    startTransition(async () => {
+      const result = await createCreativeNote(yearId, {
+        type: "doc",
+        content: [],
+      });
+      if (result.success && result.data) {
+        router.refresh();
+        setEditingNote(result.data);
+      }
     });
-    if (result.success && result.data) {
-      setNotes((prev) => [result.data, ...prev]);
-      setEditingNote(result.data);
-    }
   };
 
   // Delete a creative note
   const handleDeleteNote = async (noteId: string) => {
     if (!confirm("Are you sure you want to delete this note?")) return;
 
-    const result = await deleteCreativeNote(noteId);
-    if (result.success) {
-      setNotes((prev) => prev.filter((note) => note.id !== noteId));
-      if (editingNote?.id === noteId) {
-        setEditingNote(null);
+    startTransition(async () => {
+      const result = await deleteCreativeNote(noteId);
+      if (result.success) {
+        if (editingNote?.id === noteId) {
+          setEditingNote(null);
+        }
+        router.refresh();
       }
-    }
+    });
   };
 
   // Auto-save functionality for content
@@ -137,17 +141,6 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
 
     return text || "Empty note";
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <div className="text-gray-500">Loading creative notes...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="h-full flex flex-col">

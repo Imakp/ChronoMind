@@ -27,7 +27,6 @@ export function QuarterlyReflections({
 }: QuarterlyReflectionsProps) {
   const [reflections, setReflections] = useState<QuarterlyReflection[]>([]);
   const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -37,12 +36,10 @@ export function QuarterlyReflections({
   }, [yearId]);
 
   const loadReflections = async () => {
-    setIsLoading(true);
     const result = await getQuarterlyReflections(yearId);
     if (result.success && result.data) {
       setReflections(result.data);
     }
-    setIsLoading(false);
   };
 
   // Get the current reflection for the selected quarter
@@ -71,17 +68,6 @@ export function QuarterlyReflections({
     },
     [yearId, selectedQuarter, saveTimeout]
   );
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <div className="text-gray-500">Loading quarterly reflections...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     /* OPTIMIZATION: Stack vertically on mobile, horizontal on desktop */

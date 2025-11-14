@@ -3,28 +3,17 @@
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Session } from "next-auth";
 
-export default function Navbar() {
-  const { data: session, status } = useSession();
+export default function Navbar({
+  session: serverSession,
+}: {
+  session: Session | null;
+}) {
+  const { data: session } = useSession();
 
-  if (status === "loading") {
-    return (
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                ChronoMind
-              </Link>
-            </div>
-            <div className="flex items-center">
-              <div className="animate-pulse bg-gray-200 h-8 w-20 rounded"></div>
-            </div>
-          </div>
-        </div>
-      </nav>
-    );
-  }
+  // Use server session for initial render, then client session
+  const activeSession = session ?? serverSession;
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -35,7 +24,7 @@ export default function Navbar() {
             <Link href="/" className="text-xl font-bold text-gray-900 shrink-0">
               ChronoMind
             </Link>
-            {session && (
+            {activeSession && (
               <>
                 {/* Desktop: show text links */}
                 <Link
@@ -64,11 +53,12 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {session ? (
+            {activeSession ? (
               <>
                 {/* Hide welcome text on small and medium screens */}
                 <span className="hidden lg:inline text-sm text-gray-700 truncate max-w-[150px]">
-                  Welcome, {session.user?.name || session.user?.email}
+                  Welcome,{" "}
+                  {activeSession.user?.name || activeSession.user?.email}
                 </span>
                 <Button
                   onClick={() => signOut({ callbackUrl: "/auth/signin" })}

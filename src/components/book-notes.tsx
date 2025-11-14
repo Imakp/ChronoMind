@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   createGenre,
@@ -32,7 +33,6 @@ interface BookNotesProps {
 
 export function BookNotes({ yearId, year }: BookNotesProps) {
   const [genres, setGenres] = useState<GenreWithRelations[]>([]);
-  const [loading, setLoading] = useState(true);
   const [expandedGenres, setExpandedGenres] = useState<Set<string>>(new Set());
   const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set());
   const [selectedChapter, setSelectedChapter] = useState<{
@@ -50,53 +50,59 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   }>({});
   // OPTIMIZATION: Track mobile sidebar visibility
   const [showMobileSidebar, setShowMobileSidebar] = useState(true);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     loadBookNotes();
   }, [yearId]);
 
   const loadBookNotes = async () => {
-    setLoading(true);
     const result = await getBookNotes(yearId);
     if (result.success && result.data) {
       setGenres(result.data);
     }
-    setLoading(false);
   };
 
   const handleCreateGenre = async () => {
     if (!newGenreName.trim()) return;
 
-    const result = await createGenre(yearId, newGenreName.trim());
-    if (result.success) {
-      setNewGenreName("");
-      await loadBookNotes();
-    }
+    startTransition(async () => {
+      const result = await createGenre(yearId, newGenreName.trim());
+      if (result.success) {
+        setNewGenreName("");
+        router.refresh();
+      }
+    });
   };
 
   const handleCreateBook = async (genreId: string) => {
     const title = newBookTitle[genreId];
     if (!title?.trim()) return;
 
-    const result = await createBook(genreId, title.trim());
-    if (result.success) {
-      setNewBookTitle({ ...newBookTitle, [genreId]: "" });
-      await loadBookNotes();
-    }
+    startTransition(async () => {
+      const result = await createBook(genreId, title.trim());
+      if (result.success) {
+        setNewBookTitle({ ...newBookTitle, [genreId]: "" });
+        router.refresh();
+      }
+    });
   };
 
   const handleCreateChapter = async (bookId: string) => {
     const title = newChapterTitle[bookId];
     if (!title?.trim()) return;
 
-    const result = await createChapter(bookId, title.trim(), {
-      type: "doc",
-      content: [],
+    startTransition(async () => {
+      const result = await createChapter(bookId, title.trim(), {
+        type: "doc",
+        content: [],
+      });
+      if (result.success) {
+        setNewChapterTitle({ ...newChapterTitle, [bookId]: "" });
+        router.refresh();
+      }
     });
-    if (result.success) {
-      setNewChapterTitle({ ...newChapterTitle, [bookId]: "" });
-      await loadBookNotes();
-    }
   };
 
   const handleChapterClick = (chapter: any) => {
@@ -121,8 +127,10 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
         "Are you sure you want to delete this genre and all its books and chapters?"
       )
     ) {
-      await deleteGenre(genreId);
-      await loadBookNotes();
+      startTransition(async () => {
+        await deleteGenre(genreId);
+        router.refresh();
+      });
     }
   };
 
@@ -130,8 +138,10 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
     if (
       confirm("Are you sure you want to delete this book and all its chapters?")
     ) {
-      await deleteBook(bookId);
-      await loadBookNotes();
+      startTransition(async () => {
+        await deleteBook(bookId);
+        router.refresh();
+      });
     }
   };
 
@@ -140,8 +150,10 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
       if (selectedChapter?.id === chapterId) {
         setSelectedChapter(null);
       }
-      await deleteChapter(chapterId);
-      await loadBookNotes();
+      startTransition(async () => {
+        await deleteChapter(chapterId);
+        router.refresh();
+      });
     }
   };
 
@@ -164,17 +176,6 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
     }
     setExpandedBooks(newExpanded);
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <div className="text-gray-500">Loading book notes...</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     /* OPTIMIZATION: Stack vertically on mobile, horizontal on desktop */
