@@ -27,7 +27,7 @@ export function useHighlightManager(
 
     const { from, to } = editor.state.selection;
     const text = editor.state.doc.textBetween(from, to, " ");
-    
+
     // Calculate position strictly based on the end of the selection
     const coords = editor.view.coordsAtPos(to);
 
@@ -67,9 +67,9 @@ export function useHighlightManager(
         .setTextSelection({ from, to })
         .setHighlight({ tags, id: tiptapId })
         .run();
-      
+
       // B. Trigger immediate JSON Save in Parent
-      // Note: editor.chain().run() automatically triggers 'onUpdate', 
+      // Note: editor.chain().run() automatically triggers 'onUpdate',
       // which bubbles up to your DailyLogs/etc components to save the JSON.
 
       // C. Server Sync (Metadata Persistence)
@@ -78,6 +78,15 @@ export function useHighlightManager(
         if (!tagsResult.success || !tagsResult.data)
           throw new Error("Tag error");
 
+        const tagIds = tagsResult.data.map((t: any) => t.id);
+
+        // console.log("--- createHighlight PAYLOAD ---");
+        // console.log("Entity Type:", entityContext.type);
+        // console.log("Entity ID:", entityContext.id);
+        // console.log("Text:", text);
+        // console.log("Tiptap ID:", tiptapId);
+        // console.log("Tag IDs:", tagIds);
+
         await createHighlight(
           entityContext.type as any,
           entityContext.id,
@@ -85,7 +94,7 @@ export function useHighlightManager(
           from,
           to,
           tiptapId,
-          tagsResult.data.map((t: any) => t.id)
+          tagIds
         );
         toast.success("Highlight saved");
       } catch (e) {

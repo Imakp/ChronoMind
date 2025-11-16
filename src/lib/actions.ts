@@ -1032,6 +1032,9 @@ export async function createHighlight(
         break;
     }
 
+    // console.log("--- Prisma highlight.create DATA ---");
+    // console.log(JSON.stringify(data, null, 2));
+
     const highlight = await db.highlight.create({
       data,
       include: {
@@ -1155,7 +1158,7 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
     const highlights = await db.highlight.findMany({
       where: {
         tags: {
-          some: { id: tagId },
+          some: { id: tagId, userId: userId },
         },
       },
       include: {
@@ -1223,6 +1226,9 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    // console.log(`--- getTaggedContentByTag (tagId: ${tagId}) ---`);
+    // console.log("Raw Highlights from DB:", JSON.stringify(highlights, null, 2));
 
     // Transform highlights into tagged content with source information
     const taggedContent = highlights.map((highlight: any) => {
@@ -1313,6 +1319,8 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
     const validContent = taggedContent.filter(
       (content) => content.source !== null
     );
+
+    // console.log("Mapped validContent:", JSON.stringify(validContent, null, 2));
 
     return { success: true, data: validContent };
   } catch (error) {
