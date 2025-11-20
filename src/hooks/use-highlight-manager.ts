@@ -41,14 +41,23 @@ export function useHighlightManager(
 
   // 2. Trigger Menu (Attached to Toolbar Button)
   const triggerHighlightMenu = useCallback(() => {
-    if (!editor || editor.state.selection.empty) {
+    if (!editor) return;
+    const { from, to, empty } = editor.state.selection;
+    if (empty || from === to) {
       toast.info("Please select some text first");
       return;
     }
-    // Force an update of coordinates just in case
     updateSelectionState();
     setMenuState((prev) => ({ ...prev, isOpen: true }));
   }, [editor, updateSelectionState]);
+
+  // Polyfilled UUID for environments without crypto.randomUUID()
+  const generateUUID = () => {
+    return typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : Math.random().toString(36).substring(2) + Date.now().toString(36);
+  };
 
   // 3. Apply Tags & Persist
   const applyTags = useCallback(
@@ -57,7 +66,7 @@ export function useHighlightManager(
 
       setMenuState((prev) => ({ ...prev, isOpen: false }));
       const { from, to, text } = menuState.selection;
-      const tiptapId = crypto.randomUUID();
+      const tiptapId = generateUUID();
 
       // A. Optimistic UI Update (Visual Persistence)
       // This applies the <mark> tag internally in Tiptap

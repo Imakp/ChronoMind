@@ -369,6 +369,7 @@ export function RichTextEditor({
           <div className="hidden sm:block w-px h-6 bg-gray-300 mx-1" />
           <Button
             onClick={triggerHighlightMenu}
+            onMouseDown={(e) => e.preventDefault()}
             variant={menuState.isOpen ? "default" : "outline"}
             size="sm"
             className="h-8 px-2 sm:px-3 flex-1 sm:flex-initial"

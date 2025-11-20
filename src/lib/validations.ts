@@ -189,6 +189,7 @@ export const createHighlightSchema = z.object({
   tiptapId: z.string().min(1, "Tiptap ID is required"),
   text: z
     .string()
+    .trim()
     .min(1, "Text is required")
     .max(5000, "Text must be 5000 characters or less"),
   startOffset: z.number().int().min(0, "Start offset must be non-negative"),
