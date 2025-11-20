@@ -3,14 +3,15 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   // Performance optimizations
   compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
+    // removeConsole: process.env.NODE_ENV === "production",
+    removeConsole: false,
   },
 
   // Enable experimental features for better performance
   experimental: {
     optimizePackageImports: [
-      "@tiptap/react",
-      "@tiptap/starter-kit",
+      // "@tiptap/react",       <-- DELETE
+      // "@tiptap/starter-kit", <-- DELETE
       "lucide-react",
     ],
   },
