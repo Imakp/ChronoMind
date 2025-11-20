@@ -970,15 +970,15 @@ export async function createHighlight(
   tiptapId: string,
   tagIds?: string[]
 ) {
-  console.log("PRODUCTION DEBUG:", {
-    entityType,
-    entityId,
-    text,
-    startOffset,
-    endOffset,
-    tiptapId,
-    tagIds,
-  });
+  // console.log("PRODUCTION DEBUG:", {
+  //   entityType,
+  //   entityId,
+  //   text,
+  //   startOffset,
+  //   endOffset,
+  //   tiptapId,
+  //   tagIds,
+  // });
   try {
     // Validate input (including tiptapId)
     const validated = createHighlightSchema.parse({

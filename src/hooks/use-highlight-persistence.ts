@@ -75,7 +75,7 @@ export function useHighlightPersistence(
     // 5. Dispatch Transaction if changes were made
     if (modified) {
       view.dispatch(transaction);
-      console.log("🔄 Restored missing highlights from DB");
+      // console.log("🔄 Restored missing highlights from DB");
     }
 
     hasRestored.current = true;
