@@ -4,6 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Session } from "next-auth";
+import { YearSwitcher } from "./year-switcher";
 
 export default function Navbar({
   session: serverSession,
@@ -33,6 +34,7 @@ export default function Navbar({
                 >
                   Years
                 </Link>
+                <YearSwitcher userId={activeSession.user?.id || ""} />
                 <Link
                   href="/tags"
                   className="hidden sm:block text-sm text-gray-700 hover:text-gray-900"

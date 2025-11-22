@@ -143,16 +143,10 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      {/* OPTIMIZATION: Header with responsive layout */}
+    <div className="h-full flex flex-col bg-white">
+      {/* Header */}
       <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-semibold">Creative Dump</h2>
-            <p className="text-xs sm:text-sm text-gray-500 mt-1">
-              Quick capture for spontaneous thoughts and ideas
-            </p>
-          </div>
+        <div className="flex items-center justify-end">
           <Button
             onClick={handleCreateNote}
             size="sm"
@@ -164,7 +158,7 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
         </div>
       </div>
 
-      {/* OPTIMIZATION: Notes Grid with responsive padding */}
+      {/* Notes Grid */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center px-4">

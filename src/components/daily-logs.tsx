@@ -155,16 +155,13 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
   };
 
   return (
-    <div className="flex h-full">
-      {/* OPTIMIZATION: Desktop sidebar - hidden on mobile, visible at md+ */}
+    <div className="flex h-full bg-white">
+      {/* Desktop sidebar */}
       <nav
         className="hidden md:block w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto"
         aria-label="Daily logs navigation"
       >
         <div className="p-4">
-          <h2 className="text-lg font-semibold mb-4" id="daily-logs-heading">
-            Daily Logs
-          </h2>
           <Button
             onClick={handleToday}
             variant="outline"
@@ -175,11 +172,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             <Calendar className="w-4 h-4 mr-2" aria-hidden="true" />
             Today
           </Button>
-          <div
-            className="space-y-1"
-            role="list"
-            aria-labelledby="daily-logs-heading"
-          >
+          <div className="space-y-1" role="list">
             {logs.map((log) => (
               <button
                 key={log.id}
@@ -212,11 +205,10 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
       {/* Main editor area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* OPTIMIZATION: Mobile navigation header - only visible below md */}
+        {/* Mobile navigation header */}
         {selectedLog && (
           <div className="md:hidden border-b border-gray-200 bg-white p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
-              <h2 className="text-base font-semibold">Daily Logs</h2>
               <Button
                 onClick={handleToday}
                 variant="outline"
@@ -250,14 +242,10 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
         {selectedLog ? (
           <>
-            {/* OPTIMIZATION: Header with responsive layout */}
+            {/* Date navigation */}
             <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-2">
-                <div
-                  className="flex items-center gap-2 min-w-0 flex-1"
-                  role="group"
-                  aria-label="Date navigation"
-                >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
                   <Button
                     onClick={handlePreviousDay}
                     variant="outline"
@@ -267,10 +255,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                   >
                     <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                   </Button>
-                  <h3
-                    className="text-base sm:text-xl font-semibold truncate"
-                    id="current-log-date"
-                  >
+                  <h3 className="text-base sm:text-lg font-medium truncate">
                     <span className="hidden sm:inline">
                       {formatDate(selectedLog.date)}
                     </span>
@@ -289,23 +274,15 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                   </Button>
                 </div>
                 {isSaving && (
-                  <div
-                    className="text-xs sm:text-sm text-gray-500 shrink-0"
-                    role="status"
-                    aria-live="polite"
-                  >
+                  <div className="text-xs sm:text-sm text-gray-500 shrink-0">
                     Saving...
                   </div>
                 )}
               </div>
             </div>
 
-            {/* OPTIMIZATION: Editor with responsive padding */}
-            <div
-              className="flex-1 overflow-y-auto p-4 sm:p-6"
-              role="main"
-              aria-labelledby="current-log-date"
-            >
+            {/* Editor */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
               <EditorWithPersistence
                 key={selectedLog.id}
                 entityType="dailyLog"
@@ -320,10 +297,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             </div>
           </>
         ) : (
-          <div
-            className="flex-1 flex items-center justify-center p-4"
-            role="main"
-          >
+          <div className="flex-1 flex items-center justify-center p-4">
             <div className="text-center">
               <Calendar
                 className="w-12 h-12 text-gray-400 mx-auto mb-4"

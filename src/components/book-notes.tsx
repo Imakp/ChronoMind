@@ -197,9 +197,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
         >
           {/* Mobile sidebar header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-            <h2 className="text-lg font-bold text-gray-900">
-              Book Notes {year}
-            </h2>
+            <h2 className="text-lg font-bold text-gray-900">Book Notes</h2>
             <button
               onClick={() => setShowMobileSidebar(false)}
               className="text-gray-500 hover:text-gray-700"
@@ -420,13 +418,9 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
         </div>
       </div>
 
-      {/* OPTIMIZATION: Desktop sidebar - visible only on md+ */}
+      {/* Desktop sidebar */}
       <div className="hidden md:block w-80 flex-shrink-0 border-r border-gray-200 overflow-y-auto bg-gray-50">
         <div className="p-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Book Notes {year}
-          </h2>
-
           {/* Create New Genre */}
           <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 p-3">
             <div className="flex gap-2">
@@ -631,11 +625,11 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
         </div>
       </div>
 
-      {/* Right Panel - Chapter Editor */}
-      <div className="flex-1 overflow-y-auto min-w-0">
+      {/* Chapter Editor */}
+      <div className="flex-1 overflow-y-auto min-w-0 bg-white">
         {selectedChapter ? (
           <div className="h-full flex flex-col">
-            {/* OPTIMIZATION: Mobile header with back button */}
+            {/* Chapter header */}
             <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
               <div className="flex items-center gap-3">
                 <button
@@ -644,12 +638,11 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 truncate flex-1">
+                <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate flex-1">
                   {selectedChapter.title}
                 </h3>
               </div>
             </div>
-            {/* OPTIMIZATION: Reduced padding on mobile */}
             <div className="flex-1 p-4 sm:p-6">
               <EditorWithPersistence
                 key={selectedChapter.id}
@@ -665,7 +658,6 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
         ) : (
           <div className="flex items-center justify-center h-full p-4">
             <div className="text-center">
-              {/* OPTIMIZATION: Show menu button when no chapter selected on mobile */}
               <button
                 onClick={() => setShowMobileSidebar(true)}
                 className="md:hidden mb-4 mx-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -674,9 +666,6 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
                 <span>Browse Books</span>
               </button>
               <div className="text-6xl mb-4">📖</div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-                No Chapter Selected
-              </h3>
               <p className="text-gray-600 text-sm sm:text-base">
                 Select a chapter to start editing
               </p>

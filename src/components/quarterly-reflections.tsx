@@ -70,15 +70,10 @@ export function QuarterlyReflections({
   );
 
   return (
-    /* OPTIMIZATION: Stack vertically on mobile, horizontal on desktop */
-    <div className="flex h-full flex-col md:flex-row">
-      {/* OPTIMIZATION: Desktop sidebar - hidden on mobile, visible at md+ */}
+    <div className="flex h-full flex-col md:flex-row bg-white">
+      {/* Desktop sidebar */}
       <div className="hidden md:block w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0">
         <div className="p-4">
-          <h2 className="text-lg font-semibold mb-4">Quarterly Reflections</h2>
-          <p className="text-sm text-gray-600 mb-4">
-            Reflect on each quarter of {year}
-          </p>
           <div className="space-y-2">
             {QUARTERS.map((quarter) => (
               <button
@@ -98,9 +93,8 @@ export function QuarterlyReflections({
         </div>
       </div>
 
-      {/* OPTIMIZATION: Mobile quarter selector - only visible below md */}
+      {/* Mobile quarter selector */}
       <div className="md:hidden border-b border-gray-200 bg-white p-4">
-        <h2 className="text-base font-semibold mb-3">Quarterly Reflections</h2>
         <div className="flex gap-2 justify-stretch">
           {QUARTERS.map((quarter) => (
             <button
@@ -120,11 +114,11 @@ export function QuarterlyReflections({
 
       {/* Main editor area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* OPTIMIZATION: Header with responsive layout */}
+        {/* Quarter info header */}
         <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="text-base sm:text-xl font-semibold truncate">
+              <h3 className="text-base sm:text-lg font-medium truncate">
                 {QUARTERS[selectedQuarter - 1].name}
               </h3>
               <p className="text-sm text-gray-600">
@@ -139,7 +133,7 @@ export function QuarterlyReflections({
           </div>
         </div>
 
-        {/* OPTIMIZATION: Editor with responsive padding */}
+        {/* Editor */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <EditorWithPersistence
             key={`${yearId}-q${selectedQuarter}`}

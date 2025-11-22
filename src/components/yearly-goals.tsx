@@ -244,18 +244,8 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
   };
 
   return (
-    /* OPTIMIZATION: Responsive padding - p-4 on mobile, p-6 on larger screens */
-    <div className="h-full overflow-y-auto p-4 sm:p-6">
+    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-white">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
-            Yearly Goals for {year}
-          </h2>
-          <p className="text-sm sm:text-base text-gray-600">
-            Track your goals with hierarchical progress calculation
-          </p>
-        </div>
-
         {/* Create New Goal */}
         <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
           <div className="flex flex-col sm:flex-row gap-2">
