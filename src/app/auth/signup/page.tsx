@@ -58,8 +58,10 @@ export default function SignUpPage() {
             "Registration successful, but sign in failed. Please try signing in manually."
           );
         } else {
-          router.push("/");
+          // router.push("/");
+          // router.refresh();
           router.refresh();
+          router.push("/");
         }
       } else {
         const data = await response.json();
