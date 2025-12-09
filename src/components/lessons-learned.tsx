@@ -11,32 +11,57 @@ import {
   getLessons,
 } from "@/lib/actions";
 import { Button } from "./ui/button";
-import { Plus, Trash2, X } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Plus,
+  Trash2,
+  Lightbulb,
+  Quote,
+  Calendar,
+  ArrowRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/lib/error-handler";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface LessonsLearnedProps {
   yearId: string;
   year: number;
 }
 
-export function LessonsLearned({ yearId }: LessonsLearnedProps) {
+// Pastel color palette for cards
+const CARD_COLORS = [
+  "bg-amber-50 border-amber-200 hover:border-amber-300",
+  "bg-blue-50 border-blue-200 hover:border-blue-300",
+  "bg-emerald-50 border-emerald-200 hover:border-emerald-300",
+  "bg-rose-50 border-rose-200 hover:border-rose-300",
+  "bg-purple-50 border-purple-200 hover:border-purple-300",
+];
+
+const getLessonColor = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return CARD_COLORS[Math.abs(hash) % CARD_COLORS.length];
+};
+
+export function LessonsLearned({ yearId, year }: LessonsLearnedProps) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [savingLessons, setSavingLessons] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-
-  // Use refs to store timeouts and avoid stale closures
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lessonsRef = useRef<Lesson[]>([]);
 
-  // Keep ref in sync with state
   useEffect(() => {
     lessonsRef.current = lessons;
   }, [lessons]);
 
-  // Load all lessons for the year
   useEffect(() => {
     loadLessons();
   }, [yearId]);
@@ -48,276 +73,245 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
     }
   };
 
-  // Create a new lesson
   const handleCreateLesson = async () => {
     startTransition(async () => {
-      const result = await createLesson(yearId, "Untitled Lesson", {
+      const result = await createLesson(yearId, "New Insight", {
         type: "doc",
         content: [],
       });
       if (result.success && result.data) {
         router.refresh();
+        setLessons([result.data, ...lessons]);
         setEditingLesson(result.data);
-        toast.success("Lesson created successfully");
+        toast.success("Insight captured");
       } else {
         toast.error(getUserFriendlyError(result.error));
       }
     });
   };
 
-  // Delete a lesson
   const handleDeleteLesson = async (lessonId: string) => {
-    if (!confirm("Are you sure you want to delete this lesson?")) return;
-
+    if (!confirm("Forget this lesson?")) return;
     startTransition(async () => {
       const result = await deleteLesson(lessonId);
       if (result.success) {
-        if (editingLesson?.id === lessonId) {
-          setEditingLesson(null);
-        }
+        if (editingLesson?.id === lessonId) setEditingLesson(null);
+        setLessons(lessons.filter((l) => l.id !== lessonId));
         router.refresh();
-        toast.success("Lesson deleted successfully");
-      } else {
-        toast.error(getUserFriendlyError(result.error));
+        toast.success("Lesson deleted");
       }
     });
   };
 
-  // Auto-save functionality for title
   const handleTitleChange = (lessonId: string, newTitle: string) => {
-    // Update local state immediately
     setLessons((prev) =>
-      prev.map((lesson) =>
-        lesson.id === lessonId ? { ...lesson, title: newTitle } : lesson
-      )
+      prev.map((l) => (l.id === lessonId ? { ...l, title: newTitle } : l))
     );
 
-    // Update editing lesson if it's the one being edited
-    setEditingLesson((prev) =>
-      prev?.id === lessonId ? { ...prev, title: newTitle } : prev
-    );
-
-    // Clear existing timeout for this lesson
-    const existingTimeout = saveTimeoutsRef.current.get(lessonId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
+    if (editingLesson?.id === lessonId) {
+      setEditingLesson((prev) => (prev ? { ...prev, title: newTitle } : null));
     }
 
-    // Set new timeout for auto-save
+    const existingTimeout = saveTimeoutsRef.current.get(lessonId);
+    if (existingTimeout) clearTimeout(existingTimeout);
+
     const timeout = setTimeout(async () => {
       setSavingLessons((prev) => new Set(prev).add(lessonId));
-
-      // Get the current lesson data from ref
       const lesson = lessonsRef.current.find((l) => l.id === lessonId);
       if (lesson) {
-        try {
-          await updateLesson(
-            lessonId,
-            newTitle,
-            (lesson.content as any) || { type: "doc", content: [] }
-          );
-        } catch (error) {
-          console.error("Error saving lesson title:", error);
-        } finally {
-          setSavingLessons((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(lessonId);
-            return newSet;
-          });
-        }
+        await updateLesson(lessonId, newTitle, lesson.content as any);
+        setSavingLessons((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(lessonId);
+          return newSet;
+        });
       }
     }, 1000);
 
     saveTimeoutsRef.current.set(lessonId, timeout);
   };
 
-  // Auto-save functionality for content
   const handleContentChange = useCallback((lessonId: string, content: any) => {
-    // Update local state immediately with new content
     setLessons((prev) =>
-      prev.map((lesson) =>
-        lesson.id === lessonId ? { ...lesson, content: content as any } : lesson
+      prev.map((l) =>
+        l.id === lessonId ? { ...l, content: content as any } : l
       )
     );
 
-    // Update editing lesson if it's the one being edited
-    setEditingLesson((prev) =>
-      prev?.id === lessonId ? { ...prev, content: content as any } : prev
-    );
-
-    // Clear existing timeout for this lesson
     const existingTimeout = saveTimeoutsRef.current.get(lessonId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
+    if (existingTimeout) clearTimeout(existingTimeout);
 
-    // Set new timeout for auto-save
     const timeout = setTimeout(async () => {
       setSavingLessons((prev) => new Set(prev).add(lessonId));
-
-      // Get the current lesson data from ref
       const lesson = lessonsRef.current.find((l) => l.id === lessonId);
       if (lesson) {
-        try {
-          const result = await updateLesson(lessonId, lesson.title, content);
-        } catch (error) {
-          console.error("Error saving lesson content:", error);
-        } finally {
-          setSavingLessons((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(lessonId);
-            return newSet;
-          });
-        }
+        await updateLesson(lessonId, lesson.title, content);
+        setSavingLessons((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(lessonId);
+          return newSet;
+        });
       }
     }, 1000);
 
     saveTimeoutsRef.current.set(lessonId, timeout);
   }, []);
 
-  // Format date for display
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+  const getPreviewText = (content: any) => {
+    if (!content || !content.content) return "No details added yet...";
+    return content.content
+      .map((node: any) => node.content?.map((t: any) => t.text).join(" ") || "")
+      .join(" ");
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       {/* Header */}
-      <div className="border-b border-border bg-card px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-end">
-          <Button
-            onClick={handleCreateLesson}
-            size="sm"
-            className="w-full sm:w-auto"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Lesson
-          </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-serif text-3xl font-medium text-foreground tracking-tight">
+            Lessons Learned
+          </h2>
+          <p className="text-muted-foreground mt-1 text-lg">
+            Distilled wisdom and principles from your experiences in {year}.
+          </p>
         </div>
+        <Button onClick={handleCreateLesson} size="lg" className="shadow-sm">
+          <Lightbulb className="w-4 h-4 mr-2" />
+          Capture Insight
+        </Button>
       </div>
 
-      {/* Card Grid */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        {lessons.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-            <p className="text-muted-foreground mb-4">
-              No lessons yet. Start capturing your insights!
-            </p>
-            <Button onClick={handleCreateLesson} className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Lesson
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {lessons.map((lesson) => (
-              <div
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <AnimatePresence>
+          {lessons.map((lesson, i) => {
+            const colorClass = getLessonColor(lesson.id);
+            const preview = getPreviewText(lesson.content);
+            return (
+              <motion.div
                 key={lesson.id}
-                className="border border-border/60 rounded-lg bg-card shadow-sm hover-elevate cursor-pointer"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: i * 0.05 }}
                 onClick={() => setEditingLesson(lesson)}
               >
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-serif font-semibold text-foreground flex-1 line-clamp-2 text-sm sm:text-base">
-                      {lesson.title}
-                    </h3>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteLesson(lesson.id);
-                      }}
-                      className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground line-clamp-4 mb-2">
-                    {/* Display plain text preview of content */}
-                    {lesson.content &&
-                    typeof lesson.content === "object" &&
-                    "content" in lesson.content
-                      ? (lesson.content as any).content
-                          ?.map((node: any) =>
-                            node.content
-                              ?.map((textNode: any) => textNode.text || "")
-                              .join("")
-                          )
-                          .join(" ") || "Empty lesson"
-                      : "Empty lesson"}
-                  </div>
-                  <div className="text-xs text-muted-foreground/70 font-mono">
-                    {formatDate(lesson.createdAt)}
-                  </div>
-                  {savingLessons.has(lesson.id) && (
-                    <div className="text-xs text-primary mt-2">Saving...</div>
+                <Card
+                  className={cn(
+                    "h-full cursor-pointer transition-all duration-300 hover:shadow-md hover:-translate-y-1 border-l-4",
+                    colorClass
                   )}
-                </div>
-              </div>
-            ))}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <Badge
+                        variant="secondary"
+                        className="bg-white/50 hover:bg-white/80 font-mono text-xs text-muted-foreground backdrop-blur-sm"
+                      >
+                        {new Date(lesson.createdAt).toLocaleDateString()}
+                      </Badge>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteLesson(lesson.id);
+                        }}
+                        className="text-muted-foreground/50 hover:text-destructive transition-colors p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="flex gap-3">
+                      <Quote className="w-8 h-8 text-foreground/10 flex-shrink-0 -mt-1" />
+                      <CardTitle className="font-serif text-xl leading-tight text-foreground line-clamp-3">
+                        {lesson.title}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="pl-11">
+                      <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3 border-l-2 border-foreground/10 pl-3">
+                        {preview}
+                      </p>
+                      <div className="mt-4 flex items-center text-xs font-medium text-foreground/40 group-hover:text-primary transition-colors">
+                        Read more <ArrowRight className="w-3 h-3 ml-1" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+        {lessons.length === 0 && (
+          <div className="col-span-full py-20 text-center border-2 border-dashed border-border/50 rounded-xl bg-secondary/5">
+            <Lightbulb className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground">No lessons recorded yet.</p>
           </div>
         )}
       </div>
 
-      {/* OPTIMIZATION: Full-screen modal on mobile, centered on desktop */}
-      {editingLesson && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-card sm:rounded-lg shadow-xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col border border-border">
-            {/* Modal Header */}
-            <div className="border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
-              <input
-                type="text"
-                value={editingLesson.title}
-                onChange={(e) =>
-                  handleTitleChange(editingLesson.id, e.target.value)
-                }
-                className="text-lg sm:text-2xl font-semibold border-none outline-none focus:ring-0 flex-1 min-w-0"
-                placeholder="Lesson title..."
-              />
-              <Button
-                onClick={() => setEditingLesson(null)}
-                variant="outline"
-                size="sm"
-                className="shrink-0"
+      {/* Editor Modal */}
+      <Dialog
+        open={!!editingLesson}
+        onOpenChange={(open) => !open && setEditingLesson(null)}
+      >
+        <DialogContent className="max-w-3xl h-[85vh] flex flex-col p-0 gap-0">
+          {editingLesson && (
+            <>
+              <div
+                className={cn(
+                  "border-b px-6 py-4 flex flex-col gap-2 shrink-0",
+                  getLessonColor(editingLesson.id).split(" ")[0]
+                )}
               >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-              <EditorWithPersistence
-                key={editingLesson.id}
-                entityType="lesson"
-                entityId={editingLesson.id}
-                initialContent={
-                  editingLesson.content || { type: "doc", content: [] }
-                }
-                highlights={(editingLesson as any).highlights || []}
-                onContentChange={(content) =>
-                  handleContentChange(editingLesson.id, content)
-                }
-                placeholder="What did you learn?"
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t border-border px-4 sm:px-6 py-3 flex items-center justify-between">
-              <div className="text-xs sm:text-sm text-muted-foreground truncate font-mono">
-                Created {formatDate(editingLesson.createdAt)}
-              </div>
-              {savingLessons.has(editingLesson.id) && (
-                <div className="text-xs sm:text-sm text-blue-600 shrink-0 ml-2">
-                  Saving...
+                <input
+                  value={editingLesson.title}
+                  onChange={(e) =>
+                    handleTitleChange(editingLesson.id, e.target.value)
+                  }
+                  className="bg-transparent text-2xl font-serif font-bold text-foreground outline-none placeholder:text-muted-foreground/50"
+                  placeholder="The Core Principle..."
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(editingLesson.createdAt).toLocaleDateString(
+                      undefined,
+                      {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      }
+                    )}
+                  </div>
+                  {savingLessons.has(editingLesson.id) ? (
+                    <span className="animate-pulse text-primary">
+                      Saving...
+                    </span>
+                  ) : (
+                    <span>Saved</span>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 bg-background/50">
+                <EditorWithPersistence
+                  key={editingLesson.id}
+                  entityType="lesson"
+                  entityId={editingLesson.id}
+                  initialContent={editingLesson.content}
+                  onContentChange={(content) =>
+                    handleContentChange(editingLesson.id, content)
+                  }
+                  placeholder="Elaborate on this lesson. What triggered it? How will you apply it?"
+                  highlights={(editingLesson as any).highlights || []}
+                />
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

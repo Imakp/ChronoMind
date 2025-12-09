@@ -11,12 +11,33 @@ import {
   getCreativeNotes,
 } from "@/lib/actions";
 import { Button } from "./ui/button";
-import { Plus, Trash2, X } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Plus, Trash2, Hash, Sparkles, Calendar } from "lucide-react";
+import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface CreativeDumpProps {
   yearId: string;
   year: number;
 }
+
+// Vibrant "Sticky Note" colors
+const NOTE_COLORS = [
+  "bg-yellow-100 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800",
+  "bg-pink-100 dark:bg-pink-900/30 border-pink-200 dark:border-pink-800",
+  "bg-cyan-100 dark:bg-cyan-900/30 border-cyan-200 dark:border-cyan-800",
+  "bg-lime-100 dark:bg-lime-900/30 border-lime-200 dark:border-lime-800",
+  "bg-orange-100 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800",
+];
+
+const getNoteColor = (id: string) => {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = id.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return NOTE_COLORS[Math.abs(hash) % NOTE_COLORS.length];
+};
 
 export function CreativeDump({ yearId }: CreativeDumpProps) {
   const [notes, setNotes] = useState<CreativeNote[]>([]);
@@ -24,17 +45,13 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
   const [savingNotes, setSavingNotes] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-
-  // Use refs to store timeouts and avoid stale closures
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const notesRef = useRef<CreativeNote[]>([]);
 
-  // Keep ref in sync with state
   useEffect(() => {
     notesRef.current = notes;
   }, [notes]);
 
-  // Load all creative notes for the year
   useEffect(() => {
     loadNotes();
   }, [yearId]);
@@ -46,7 +63,6 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
     }
   };
 
-  // Create a new creative note
   const handleCreateNote = async () => {
     startTransition(async () => {
       const result = await createCreativeNote(yearId, {
@@ -55,207 +71,185 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
       });
       if (result.success && result.data) {
         router.refresh();
+        setNotes([result.data, ...notes]);
         setEditingNote(result.data);
+        toast.success("New note created");
       }
     });
   };
 
-  // Delete a creative note
   const handleDeleteNote = async (noteId: string) => {
-    if (!confirm("Are you sure you want to delete this note?")) return;
-
+    if (!confirm("Scrap this idea?")) return;
     startTransition(async () => {
       const result = await deleteCreativeNote(noteId);
       if (result.success) {
-        if (editingNote?.id === noteId) {
-          setEditingNote(null);
-        }
+        if (editingNote?.id === noteId) setEditingNote(null);
+        setNotes(notes.filter((n) => n.id !== noteId));
         router.refresh();
+        toast.success("Note deleted");
       }
     });
   };
 
-  // Auto-save functionality for content
   const handleContentChange = useCallback((noteId: string, content: any) => {
-    // Update local state immediately with new content
     setNotes((prev) =>
-      prev.map((note) =>
-        note.id === noteId ? { ...note, content: content as any } : note
-      )
+      prev.map((n) => (n.id === noteId ? { ...n, content: content as any } : n))
     );
 
-    // Update editing note if it's the one being edited
-    setEditingNote((prev) =>
-      prev?.id === noteId ? { ...prev, content: content as any } : prev
-    );
-
-    // Clear existing timeout for this note
     const existingTimeout = saveTimeoutsRef.current.get(noteId);
-    if (existingTimeout) {
-      clearTimeout(existingTimeout);
-    }
+    if (existingTimeout) clearTimeout(existingTimeout);
 
-    // Set new timeout for auto-save
     const timeout = setTimeout(async () => {
       setSavingNotes((prev) => new Set(prev).add(noteId));
-
-      try {
-        const result = await updateCreativeNote(noteId, content);
-      } catch (error) {
-        console.error("Error saving creative note content:", error);
-      } finally {
-        setSavingNotes((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(noteId);
-          return newSet;
-        });
-      }
+      await updateCreativeNote(noteId, content);
+      setSavingNotes((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(noteId);
+        return newSet;
+      });
     }, 1000);
 
     saveTimeoutsRef.current.set(noteId, timeout);
   }, []);
 
-  // Format date for display
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  // Extract plain text preview from Tiptap content
-  const getTextPreview = (content: any): string => {
-    if (!content || typeof content !== "object" || !("content" in content)) {
-      return "Empty note";
-    }
-
-    const text = (content as any).content
-      ?.map((node: any) =>
-        node.content?.map((textNode: any) => textNode.text || "").join("")
-      )
-      .join(" ")
-      .trim();
-
-    return text || "Empty note";
+  const getPlainText = (content: any) => {
+    if (!content || !content.content) return "Empty note...";
+    const text = content.content
+      .map((node: any) => node.content?.map((t: any) => t.text).join(" ") || "")
+      .join(" ");
+    return text.trim() || "Empty note...";
   };
 
   return (
-    <div className="h-full flex flex-col bg-background">
-      {/* Header */}
-      <div className="border-b border-border bg-card px-4 sm:px-6 py-4">
-        <div className="flex items-center justify-end">
-          <Button
-            onClick={handleCreateNote}
-            size="sm"
-            className="w-full sm:w-auto shrink-0"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Note
-          </Button>
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-serif text-3xl font-medium text-foreground tracking-tight">
+            Creative Dump
+          </h2>
+          <p className="text-muted-foreground mt-1 text-lg">
+            Unstructured space for brainwaves, drafts, and sparks.
+          </p>
         </div>
+        <Button
+          onClick={handleCreateNote}
+          size="lg"
+          className="shadow-sm bg-gradient-to-r from-pink-500 to-rose-500 text-white border-none hover:opacity-90"
+        >
+          <Sparkles className="w-4 h-4 mr-2" />
+          New Spark
+        </Button>
       </div>
 
-      {/* Notes Grid */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        {notes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-            <p className="text-muted-foreground mb-4">
-              No notes yet. Start dumping your creative ideas!
-            </p>
-            <Button onClick={handleCreateNote} className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Note
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-            {notes.map((note) => (
-              <div
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <AnimatePresence>
+          {notes.map((note, i) => {
+            const colorClass = getNoteColor(note.id);
+            const text = getPlainText(note.content);
+            const isShort = text.length < 50;
+
+            return (
+              <motion.div
                 key={note.id}
-                className="border border-border/60 rounded-lg bg-card shadow-sm hover-elevate cursor-pointer"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: i * 0.05 }}
                 onClick={() => setEditingNote(note)}
+                className="h-full"
               >
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="text-xs sm:text-sm text-muted-foreground line-clamp-6 flex-1 font-serif">
-                      {getTextPreview(note.content)}
-                    </div>
+                <div
+                  className={cn(
+                    "relative group cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:rotate-1 min-h-[180px] flex flex-col justify-between",
+                    colorClass
+                  )}
+                >
+                  {/* Content Preview */}
+                  <div
+                    className={cn(
+                      "font-serif text-foreground/90 leading-relaxed overflow-hidden",
+                      isShort
+                        ? "text-xl font-medium text-center flex items-center justify-center h-full"
+                        : "text-sm line-clamp-6"
+                    )}
+                  >
+                    {text}
+                  </div>
+
+                  {/* Metadata Footer */}
+                  <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between opacity-60 group-hover:opacity-100 transition-opacity">
+                    <span className="text-xs font-mono font-medium flex items-center gap-1">
+                      {new Date(note.createdAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteNote(note.id);
                       }}
-                      className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                      className="hover:text-destructive transition-colors p-1"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <div className="text-xs text-muted-foreground/70 mt-2 font-mono">
-                    {formatDate(note.createdAt)}
-                  </div>
-                  {savingNotes.has(note.id) && (
-                    <div className="text-xs text-blue-600 mt-2">Saving...</div>
-                  )}
                 </div>
-              </div>
-            ))}
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+        {notes.length === 0 && (
+          <div className="col-span-full py-24 text-center border-2 border-dashed border-border/50 rounded-xl bg-secondary/5">
+            <Hash className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+            <p className="text-muted-foreground">Your canvas is blank.</p>
           </div>
         )}
       </div>
 
-      {/* OPTIMIZATION: Full-screen modal on mobile, centered on desktop */}
-      {editingNote && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-card sm:rounded-lg shadow-xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col border border-border">
-            {/* Modal Header */}
-            <div className="border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
-              <h3 className="text-lg sm:text-xl font-serif font-semibold text-foreground">
-                Creative Note
-              </h3>
-              <Button
-                onClick={() => setEditingNote(null)}
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-              <EditorWithPersistence
-                key={editingNote.id}
-                entityType="creativeNote"
-                entityId={editingNote.id}
-                initialContent={
-                  editingNote.content || { type: "doc", content: [] }
-                }
-                highlights={(editingNote as any).highlights || []}
-                onContentChange={(content) =>
-                  handleContentChange(editingNote.id, content)
-                }
-                placeholder="Let your creativity flow..."
-              />
-            </div>
-
-            {/* Modal Footer */}
-            <div className="border-t border-border px-4 sm:px-6 py-3 flex items-center justify-between">
-              <div className="text-xs sm:text-sm text-muted-foreground truncate font-mono">
-                Created {formatDate(editingNote.createdAt)}
-              </div>
-              {savingNotes.has(editingNote.id) && (
-                <div className="text-xs sm:text-sm text-blue-600 shrink-0 ml-2">
-                  Saving...
+      {/* Editor Dialog */}
+      <Dialog
+        open={!!editingNote}
+        onOpenChange={(open) => !open && setEditingNote(null)}
+      >
+        <DialogContent
+          className={cn(
+            "max-w-2xl h-[80vh] flex flex-col p-0 gap-0 shadow-2xl border-none",
+            editingNote
+              ? getNoteColor(editingNote.id).split(" ")[0]
+              : "bg-background"
+          )}
+        >
+          {editingNote && (
+            <>
+              <div className="px-6 py-4 border-b border-black/5 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2 text-sm font-medium opacity-70">
+                  <Calendar className="w-4 h-4" />
+                  {new Date(editingNote.createdAt).toLocaleString()}
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+                {savingNotes.has(editingNote.id) && (
+                  <span className="text-xs animate-pulse font-mono">
+                    Saving...
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 sm:p-10">
+                <EditorWithPersistence
+                  key={editingNote.id}
+                  entityType="creativeNote"
+                  entityId={editingNote.id}
+                  initialContent={editingNote.content}
+                  onContentChange={(content) =>
+                    handleContentChange(editingNote.id, content)
+                  }
+                  placeholder="Start typing..."
+                  highlights={(editingNote as any).highlights || []}
+                />
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

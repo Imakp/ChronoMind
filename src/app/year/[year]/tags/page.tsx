@@ -16,10 +16,11 @@ export default async function TagsPage({ params }: TagsPageProps) {
   }
 
   const { year } = await params;
+  const yearNumber = parseInt(year);
 
   return (
-    <div className="h-full">
-      <TagExplorer userId={session.user.id} />
+    <div className="h-[calc(100vh-100px)]">
+      <TagExplorer userId={session.user.id} year={yearNumber} />
     </div>
   );
 }

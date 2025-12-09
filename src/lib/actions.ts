@@ -1338,6 +1338,176 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
   }
 }
 
+// Helper to construct the year filter for highlights
+const getHighlightYearFilter = (year: number) => ({
+  OR: [
+    { dailyLog: { year: { year } } },
+    { quarterlyReflection: { year: { year } } },
+    { goal: { year: { year } } },
+    { task: { goal: { year: { year } } } },
+    { subtask: { task: { goal: { year: { year } } } } },
+    { chapter: { book: { genre: { year: { year } } } } },
+    { lesson: { year: { year } } },
+    { creativeNote: { year: { year } } },
+  ],
+});
+
+export async function getTagsForYear(userId: string, year: number) {
+  try {
+    const yearFilter = getHighlightYearFilter(year);
+    const tags = await db.tag.findMany({
+      where: {
+        userId,
+        highlights: {
+          some: yearFilter, // Only include tags used in this year
+        },
+      },
+      orderBy: { name: "asc" },
+      include: {
+        _count: {
+          select: {
+            highlights: {
+              where: yearFilter, // Only count highlights from this year
+            },
+          },
+        },
+      },
+    });
+
+    return { success: true, data: tags };
+  } catch (error) {
+    console.error("Error fetching tags for year:", error);
+    return { success: false, error: "Failed to fetch tags" };
+  }
+}
+
+export async function getTaggedContentByTagAndYear(
+  userId: string,
+  tagId: string,
+  year: number
+) {
+  try {
+    const yearFilter = getHighlightYearFilter(year);
+    const highlights = await db.highlight.findMany({
+      where: {
+        tags: {
+          some: { id: tagId, userId: userId },
+        },
+        ...yearFilter, // Apply the year filter
+      },
+      include: {
+        tags: true,
+        dailyLog: { include: { year: true } },
+        quarterlyReflection: { include: { year: true } },
+        goal: { include: { year: true } },
+        task: { include: { goal: { include: { year: true } } } },
+        subtask: {
+          include: { task: { include: { goal: { include: { year: true } } } } },
+        },
+        chapter: {
+          include: {
+            book: { include: { genre: { include: { year: true } } } },
+          },
+        },
+        lesson: { include: { year: true } },
+        creativeNote: { include: { year: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Map highlights to tagged content with source information
+    const taggedContent = highlights.map((highlight: any) => {
+      type SectionType =
+        | "daily-logs"
+        | "quarterly-reflections"
+        | "yearly-goals"
+        | "book-notes"
+        | "lessons-learned"
+        | "creative-dump";
+
+      let source: {
+        year: number;
+        section: SectionType;
+        itemId: string;
+        itemTitle: string;
+      } | null = null;
+
+      if (highlight.dailyLog) {
+        source = {
+          year: highlight.dailyLog.year.year,
+          section: "daily-logs" as const,
+          itemId: highlight.dailyLog.id,
+          itemTitle: highlight.dailyLog.date.toLocaleDateString(),
+        };
+      } else if (highlight.quarterlyReflection) {
+        source = {
+          year: highlight.quarterlyReflection.year.year,
+          section: "quarterly-reflections" as const,
+          itemId: highlight.quarterlyReflection.id,
+          itemTitle: `Q${highlight.quarterlyReflection.quarter} Reflection`,
+        };
+      } else if (highlight.goal) {
+        source = {
+          year: highlight.goal.year.year,
+          section: "yearly-goals" as const,
+          itemId: highlight.goal.id,
+          itemTitle: highlight.goal.title,
+        };
+      } else if (highlight.task) {
+        source = {
+          year: highlight.task.goal.year.year,
+          section: "yearly-goals" as const,
+          itemId: highlight.task.id,
+          itemTitle: `${highlight.task.goal.title} > ${highlight.task.title}`,
+        };
+      } else if (highlight.subtask) {
+        source = {
+          year: highlight.subtask.task.goal.year.year,
+          section: "yearly-goals" as const,
+          itemId: highlight.subtask.id,
+          itemTitle: `${highlight.subtask.task.goal.title} > ${highlight.subtask.task.title} > ${highlight.subtask.title}`,
+        };
+      } else if (highlight.chapter) {
+        source = {
+          year: highlight.chapter.book.genre.year.year,
+          section: "book-notes" as const,
+          itemId: highlight.chapter.id,
+          itemTitle: `${highlight.chapter.book.genre.name} > ${highlight.chapter.book.title} > ${highlight.chapter.title}`,
+        };
+      } else if (highlight.lesson) {
+        source = {
+          year: highlight.lesson.year.year,
+          section: "lessons-learned" as const,
+          itemId: highlight.lesson.id,
+          itemTitle: highlight.lesson.title,
+        };
+      } else if (highlight.creativeNote) {
+        source = {
+          year: highlight.creativeNote.year.year,
+          section: "creative-dump" as const,
+          itemId: highlight.creativeNote.id,
+          itemTitle: `Note from ${highlight.creativeNote.createdAt.toLocaleDateString()}`,
+        };
+      }
+
+      return {
+        id: highlight.id,
+        tiptapId: highlight.tiptapId,
+        text: highlight.text,
+        source,
+        createdAt: highlight.createdAt,
+        tags: highlight.tags,
+      };
+    });
+
+    const validContent = taggedContent.filter((c: any) => c.source !== null);
+    return { success: true, data: validContent };
+  } catch (error) {
+    console.error("Error fetching tagged content by tag and year:", error);
+    return { success: false, error: "Failed to fetch tagged content" };
+  }
+}
+
 export async function getAllTaggedContent(userId: string) {
   try {
     // Get all user's tags
