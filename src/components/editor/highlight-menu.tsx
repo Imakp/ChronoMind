@@ -94,7 +94,7 @@ export function HighlightMenu({
   return (
     <div
       ref={menuRef}
-      className="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg p-3 sm:p-4 w-[280px] max-w-[95vw]"
+      className="absolute z-50 bg-popover border border-border rounded-lg shadow-lg p-3 sm:p-4 w-[280px] max-w-[95vw]"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -103,14 +103,14 @@ export function HighlightMenu({
       {/* Header */}
       <div className="flex items-center justify-between mb-2 sm:mb-3">
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <TagIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
-          <h3 className="text-xs sm:text-sm font-semibold text-gray-900">
+          <TagIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-popover-foreground" />
+          <h3 className="text-xs sm:text-sm font-semibold text-popover-foreground">
             Tag Highlight
           </h3>
         </div>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Close"
         >
           <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -119,7 +119,7 @@ export function HighlightMenu({
 
       {/* Selected text preview */}
       <div className="mb-2 sm:mb-3">
-        <p className="text-xs text-gray-600 line-clamp-2 break-words">
+        <p className="text-xs text-muted-foreground line-clamp-2 break-words font-serif italic">
           &quot;{selectedText}&quot;
         </p>
       </div>
@@ -152,7 +152,7 @@ export function HighlightMenu({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Add tag..."
-          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-0"
+          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground min-w-0"
         />
         <Button
           onClick={handleAddTag}

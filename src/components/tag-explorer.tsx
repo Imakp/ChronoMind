@@ -4,7 +4,9 @@ import { useState, useEffect } from "react";
 import { getTags, getTaggedContentByTag } from "@/lib/actions";
 import type { TaggedContent, TagWithCount } from "@/types";
 import { Button } from "@/components/ui/button";
-import { ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { ExternalLink, Hash } from "lucide-react";
 import Link from "next/link";
 
 interface TagExplorerProps {
@@ -85,8 +87,8 @@ export function TagExplorer({ userId }: TagExplorerProps) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-gray-500">Loading tags...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading tags...</p>
         </div>
       </div>
     );
@@ -97,51 +99,59 @@ export function TagExplorer({ userId }: TagExplorerProps) {
       {!selectedTag ? (
         <>
           {/* Tag List View */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold mb-2">
+              <h2 className="text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight mb-2">
                 Tag Explorer
               </h2>
-              <p className="text-sm sm:text-base text-gray-600">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Explore all your tagged content across years and sections
               </p>
             </div>
 
             {/* Search Bar */}
-            <div>
-              <input
-                type="text"
-                placeholder="Search tags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <Card className="border-border/60">
+              <CardContent className="pt-6">
+                <input
+                  type="text"
+                  placeholder="Search tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2 text-sm sm:text-base border border-input rounded-lg focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
+                />
+              </CardContent>
+            </Card>
 
             {/* Tags Grid */}
             {filteredTags.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">
-                  {searchQuery
-                    ? "No tags found matching your search"
-                    : "No tags yet. Start highlighting and tagging content!"}
-                </p>
-              </div>
+              <Card className="border-border/60">
+                <CardContent className="text-center py-12">
+                  <Hash className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    {searchQuery
+                      ? "No tags found matching your search"
+                      : "No tags yet. Start highlighting and tagging content!"}
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {filteredTags.map((tag) => (
                   <button
                     key={tag.id}
                     onClick={() => handleTagClick(tag.id)}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all text-left"
+                    className="p-4 bg-card border border-border/60 rounded-lg hover:border-primary/50 hover:shadow-md transition-all text-left group"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-base sm:text-lg">
+                      <span className="font-serif font-medium text-base sm:text-lg text-foreground group-hover:text-primary transition-colors">
                         #{tag.name}
                       </span>
-                      <span className="text-xs sm:text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      <Badge
+                        variant="secondary"
+                        className="bg-secondary/50 font-mono"
+                      >
                         {tag.highlightCount}
-                      </span>
+                      </Badge>
                     </div>
                   </button>
                 ))}
@@ -152,16 +162,16 @@ export function TagExplorer({ userId }: TagExplorerProps) {
       ) : (
         <>
           {/* Tagged Content View */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <Button onClick={handleBackToTags} variant="outline" size="sm">
                 ← Back to Tags
               </Button>
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold">
+                <h2 className="text-xl sm:text-2xl font-serif font-bold text-foreground">
                   #{selectedTagData?.name}
                 </h2>
-                <p className="text-sm sm:text-base text-gray-600">
+                <p className="text-sm sm:text-base text-muted-foreground">
                   {taggedContent.length} highlight
                   {taggedContent.length !== 1 ? "s" : ""}
                 </p>
@@ -171,85 +181,95 @@ export function TagExplorer({ userId }: TagExplorerProps) {
             {contentLoading ? (
               <div className="flex items-center justify-center p-8">
                 <div className="flex flex-col items-center gap-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <p className="text-gray-500">Loading content...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="text-muted-foreground">Loading content...</p>
                 </div>
               </div>
             ) : taggedContent.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No content found for this tag</p>
-              </div>
+              <Card className="border-border/60">
+                <CardContent className="text-center py-12">
+                  <p className="text-muted-foreground">
+                    No content found for this tag
+                  </p>
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-4">
                 {taggedContent.map((content) => (
-                  <div
+                  <Card
                     key={content.id}
-                    className="p-4 border border-gray-200 rounded-lg hover:shadow-md transition-shadow"
+                    className="hover-elevate border-border/60"
                   >
-                    {/* Highlighted Text - Uses database snapshot */}
-                    <div className="mb-3">
-                      <p className="text-base sm:text-lg italic text-gray-700 bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
-                        "{content.text}"
-                      </p>
-                    </div>
+                    <CardContent className="p-4">
+                      {/* Highlighted Text - Uses database snapshot */}
+                      <div className="mb-3">
+                        <p className="text-base sm:text-lg font-serif italic text-foreground/90 bg-yellow-50 p-3 rounded border-l-4 border-yellow-400">
+                          "{content.text}"
+                        </p>
+                      </div>
 
-                    {/* Source Information with Navigation */}
-                    {content.source && (
-                      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-gray-600 mb-3">
-                        <span className="font-medium">
-                          {content.source.year}
-                        </span>
-                        <span>•</span>
-                        <span className="capitalize">
-                          {content.source.section.replace(/-/g, " ")}
-                        </span>
-                        {content.source.itemTitle && (
-                          <>
-                            <span>•</span>
-                            <span className="truncate max-w-[200px]">
-                              {content.source.itemTitle}
-                            </span>
-                          </>
-                        )}
+                      {/* Source Information with Navigation */}
+                      {content.source && (
+                        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-3">
+                          <span className="font-medium font-mono">
+                            {content.source.year}
+                          </span>
+                          <span>•</span>
+                          <span className="capitalize">
+                            {content.source.section.replace(/-/g, " ")}
+                          </span>
+                          {content.source.itemTitle && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate max-w-[200px]">
+                                {content.source.itemTitle}
+                              </span>
+                            </>
+                          )}
 
-                        {/* Navigate to Source Button */}
-                        {getSourceUrl(content.source) && (
-                          <>
-                            <span>•</span>
-                            <Link
-                              href={getSourceUrl(content.source)!}
-                              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
-                            >
-                              <span>View Source</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </Link>
-                          </>
+                          {/* Navigate to Source Button */}
+                          {getSourceUrl(content.source) && (
+                            <>
+                              <span>•</span>
+                              <Link
+                                href={getSourceUrl(content.source)!}
+                                className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
+                              >
+                                <span>View Source</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </Link>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {content.tags.map((tag) => (
+                          <Badge
+                            key={tag.id}
+                            variant="secondary"
+                            className="text-xs"
+                          >
+                            #{tag.name}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {/* Date */}
+                      <div className="text-xs text-muted-foreground/70 font-mono">
+                        Created{" "}
+                        {new Date(content.createdAt).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          }
                         )}
                       </div>
-                    )}
-
-                    {/* Tags */}
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {content.tags.map((tag) => (
-                        <span
-                          key={tag.id}
-                          className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded"
-                        >
-                          #{tag.name}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Date */}
-                    <div className="text-xs text-gray-400">
-                      Created{" "}
-                      {new Date(content.createdAt).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}

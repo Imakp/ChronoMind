@@ -8,6 +8,23 @@ import {
   updateQuarterlyReflection,
 } from "@/lib/actions";
 import { Button } from "./ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Calendar,
+  CheckCircle2,
+  CircleDashed,
+  ChevronRight,
+  PenLine,
+  Lock,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface QuarterlyReflectionsProps {
   yearId: string;
@@ -15,10 +32,34 @@ interface QuarterlyReflectionsProps {
 }
 
 const QUARTERS = [
-  { number: 1, label: "Q1", name: "First Quarter", months: "Jan - Mar" },
-  { number: 2, label: "Q2", name: "Second Quarter", months: "Apr - Jun" },
-  { number: 3, label: "Q3", name: "Third Quarter", months: "Jul - Sep" },
-  { number: 4, label: "Q4", name: "Fourth Quarter", months: "Oct - Dec" },
+  {
+    number: 1,
+    label: "Quarter 1",
+    months: "Jan - Mar",
+    color: "bg-emerald-50/50 border-emerald-100 hover:border-emerald-200",
+    iconColor: "text-emerald-600",
+  },
+  {
+    number: 2,
+    label: "Quarter 2",
+    months: "Apr - Jun",
+    color: "bg-blue-50/50 border-blue-100 hover:border-blue-200",
+    iconColor: "text-blue-600",
+  },
+  {
+    number: 3,
+    label: "Quarter 3",
+    months: "Jul - Sep",
+    color: "bg-amber-50/50 border-amber-100 hover:border-amber-200",
+    iconColor: "text-amber-600",
+  },
+  {
+    number: 4,
+    label: "Quarter 4",
+    months: "Oct - Dec",
+    color: "bg-rose-50/50 border-rose-100 hover:border-rose-200",
+    iconColor: "text-rose-600",
+  },
 ] as const;
 
 export function QuarterlyReflections({
@@ -26,11 +67,11 @@ export function QuarterlyReflections({
   year,
 }: QuarterlyReflectionsProps) {
   const [reflections, setReflections] = useState<QuarterlyReflection[]>([]);
-  const [selectedQuarter, setSelectedQuarter] = useState<number>(1);
+  const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
-  // Load all reflections for the year
+  // Load reflections on mount
   useEffect(() => {
     loadReflections();
   }, [yearId]);
@@ -42,114 +83,200 @@ export function QuarterlyReflections({
     }
   };
 
-  // Get the current reflection for the selected quarter
-  const currentReflection = reflections.find(
-    (r) => r.quarter === selectedQuarter
-  );
+  // Helper to extract text preview from Tiptap JSON
+  const getPreviewText = (content: any) => {
+    if (!content || !content.content) return null;
+    const text = content.content
+      .map((node: any) => node.content?.map((t: any) => t.text).join(" ") || "")
+      .join(" ");
+    return text.length > 150 ? text.slice(0, 150) + "..." : text;
+  };
 
-  // Auto-save functionality
+  // Helper to determine status
+  const getStatus = (reflection?: QuarterlyReflection) => {
+    const hasContent =
+      reflection?.content &&
+      (reflection.content as any).content?.length > 0 &&
+      getPreviewText(reflection.content);
+    if (hasContent) return "In Progress";
+    return "Not Started";
+  };
+
+  // Auto-save handler
   const handleContentChange = useCallback(
     (content: any) => {
-      // Clear existing timeout
-      if (saveTimeout) {
-        clearTimeout(saveTimeout);
-      }
+      if (!selectedQuarter) return;
 
-      // Set new timeout for auto-save
+      // Optimistic update
+      setReflections((prev) => {
+        const existing = prev.find((r) => r.quarter === selectedQuarter);
+        if (existing) {
+          return prev.map((r) =>
+            r.quarter === selectedQuarter ? { ...r, content } : r
+          );
+        }
+        return prev;
+      });
+
+      if (saveTimeout) clearTimeout(saveTimeout);
+
       const timeout = setTimeout(async () => {
         setIsSaving(true);
-        await updateQuarterlyReflection(yearId, selectedQuarter, content);
-        // Reload reflections to get the updated data
-        await loadReflections();
+        const result = await updateQuarterlyReflection(
+          yearId,
+          selectedQuarter,
+          content
+        );
+        if (result.success) {
+          await loadReflections();
+        }
         setIsSaving(false);
-      }, 1000); // Save after 1 second of inactivity
+      }, 1000);
 
       setSaveTimeout(timeout);
     },
     [yearId, selectedQuarter, saveTimeout]
   );
 
+  const activeReflection = reflections.find(
+    (r) => r.quarter === selectedQuarter
+  );
+
   return (
-    <div className="flex h-full flex-col md:flex-row bg-white">
-      {/* Desktop sidebar */}
-      <div className="hidden md:block w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto flex-shrink-0">
-        <div className="p-4">
-          <div className="space-y-2">
-            {QUARTERS.map((quarter) => (
-              <button
-                key={quarter.number}
-                onClick={() => setSelectedQuarter(quarter.number)}
-                className={`w-full text-left px-4 py-3 rounded-md transition-colors ${
-                  selectedQuarter === quarter.number
-                    ? "bg-blue-100 text-blue-900 font-medium"
-                    : "hover:bg-gray-100 text-gray-700"
-                }`}
-              >
-                <div className="font-semibold">{quarter.label}</div>
-                <div className="text-xs text-gray-600">{quarter.months}</div>
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="space-y-8 pb-20 animate-in fade-in duration-500">
+      {/* Header */}
+      <div>
+        <h2 className="font-serif text-3xl sm:text-4xl font-medium text-foreground tracking-tight">
+          Quarterly Reflections
+        </h2>
+        <p className="text-muted-foreground mt-2 text-lg">
+          Four strategic checkpoints to align your year.
+        </p>
       </div>
 
-      {/* Mobile quarter selector */}
-      <div className="md:hidden border-b border-gray-200 bg-white p-4">
-        <div className="flex gap-2 justify-stretch">
-          {QUARTERS.map((quarter) => (
-            <button
-              key={quarter.number}
-              onClick={() => setSelectedQuarter(quarter.number)}
-              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                selectedQuarter === quarter.number
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+      {/* Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {QUARTERS.map((q) => {
+          const reflection = reflections.find((r) => r.quarter === q.number);
+          const status = getStatus(reflection);
+          const preview = getPreviewText(reflection?.content);
+
+          return (
+            <Card
+              key={q.number}
+              onClick={() => setSelectedQuarter(q.number)}
+              className={cn(
+                "group cursor-pointer transition-all duration-300 hover:shadow-md border-2",
+                q.color
+              )}
             >
-              {quarter.label}
-            </button>
-          ))}
-        </div>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="font-serif text-2xl flex items-center gap-3">
+                      {q.label}
+                      {status === "In Progress" && (
+                        <CircleDashed
+                          className={cn("w-5 h-5 animate-pulse", q.iconColor)}
+                        />
+                      )}
+                      {status === "Not Started" && (
+                        <PenLine className="w-4 h-4 text-muted-foreground/50" />
+                      )}
+                    </CardTitle>
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      {q.months}
+                    </div>
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-background/50 flex items-center justify-center group-hover:translate-x-1 transition-transform">
+                    <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="min-h-[80px] flex flex-col justify-center">
+                  {preview ? (
+                    <p className="text-foreground/80 leading-relaxed font-serif line-clamp-3">
+                      {preview}
+                    </p>
+                  ) : (
+                    <div className="text-center text-muted-foreground/60 italic flex flex-col items-center gap-2">
+                      <span>Tap to start writing...</span>
+                    </div>
+                  )}
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <Badge
+                    variant="secondary"
+                    className="bg-background/60 backdrop-blur-sm"
+                  >
+                    {status === "In Progress"
+                      ? "Continue Writing"
+                      : "Start Reflection"}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Main editor area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Quarter info header */}
-        <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="text-base sm:text-lg font-medium truncate">
-                {QUARTERS[selectedQuarter - 1].name}
-              </h3>
-              <p className="text-sm text-gray-600">
-                {QUARTERS[selectedQuarter - 1].months} {year}
-              </p>
-            </div>
-            {isSaving && (
-              <div className="text-xs sm:text-sm text-gray-500 shrink-0">
-                Saving...
+      {/* Editor Modal */}
+      <Dialog
+        open={selectedQuarter !== null}
+        onOpenChange={(open) => !open && setSelectedQuarter(null)}
+      >
+        <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 gap-0 bg-background/95 backdrop-blur-xl">
+          {selectedQuarter && (
+            <>
+              {/* Modal Header */}
+              <div className="border-b border-border px-6 py-4 flex items-center justify-between shrink-0 bg-background/50">
+                <div>
+                  <DialogTitle className="font-serif text-2xl">
+                    {QUARTERS[selectedQuarter - 1].label} Reflection
+                  </DialogTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {QUARTERS[selectedQuarter - 1].months} • {year}
+                  </p>
+                </div>
+                <div className="flex items-center gap-4">
+                  {isSaving ? (
+                    <span className="text-xs text-muted-foreground animate-pulse">
+                      Saving...
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Saved</span>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Editor */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <EditorWithPersistence
-            key={`${yearId}-q${selectedQuarter}`}
-            entityType="quarterlyReflection"
-            entityId={currentReflection?.id || `${yearId}-q${selectedQuarter}`}
-            initialContent={
-              currentReflection?.content || { type: "doc", content: [] }
-            }
-            highlights={(currentReflection as any)?.highlights || []}
-            onContentChange={handleContentChange}
-            placeholder={`Reflect on your ${QUARTERS[
-              selectedQuarter - 1
-            ].name.toLowerCase()}...`}
-          />
-        </div>
-      </div>
+              {/* Editor Area */}
+              <div className="flex-1 overflow-y-auto p-6 sm:p-10">
+                <div className="max-w-3xl mx-auto">
+                  <EditorWithPersistence
+                    key={`q${selectedQuarter}-editor`}
+                    entityType="quarterlyReflection"
+                    entityId={
+                      activeReflection?.id ||
+                      `${yearId}-q${selectedQuarter}-temp`
+                    }
+                    initialContent={
+                      activeReflection?.content || {
+                        type: "doc",
+                        content: [],
+                      }
+                    }
+                    highlights={(activeReflection as any)?.highlights || []}
+                    onContentChange={handleContentChange}
+                    placeholder="What went well? What could be improved? Reflect on your progress..."
+                  />
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -155,10 +155,10 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
   };
 
   return (
-    <div className="flex h-full bg-white">
+    <div className="flex h-full bg-background">
       {/* Desktop sidebar */}
       <nav
-        className="hidden md:block w-64 border-r border-gray-200 bg-gray-50 overflow-y-auto"
+        className="hidden md:block w-64 border-r border-border bg-secondary/30 overflow-y-auto"
         aria-label="Daily logs navigation"
       >
         <div className="p-4">
@@ -177,10 +177,10 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
               <button
                 key={log.id}
                 onClick={() => setSelectedLog(log)}
-                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors font-mono ${
                   selectedLog?.id === log.id
-                    ? "bg-blue-100 text-blue-900 font-medium"
-                    : "hover:bg-gray-100 text-gray-700"
+                    ? "bg-primary text-primary-foreground font-medium shadow-sm"
+                    : "hover:bg-background text-muted-foreground hover:text-foreground"
                 }`}
                 role="listitem"
                 aria-label={`Log for ${new Date(log.date).toLocaleDateString(
@@ -207,7 +207,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile navigation header */}
         {selectedLog && (
-          <div className="md:hidden border-b border-gray-200 bg-white p-4">
+          <div className="md:hidden border-b border-border bg-card p-4">
             <div className="flex items-center justify-between gap-3 mb-3">
               <Button
                 onClick={handleToday}
@@ -224,7 +224,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
             </label>
             <select
               id="log-select"
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-ring"
               value={selectedLog.id}
               onChange={(e) => {
                 const log = logs.find((l) => l.id === e.target.value);
@@ -243,7 +243,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
         {selectedLog ? (
           <>
             {/* Date navigation */}
-            <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
+            <div className="border-b border-border bg-card px-4 sm:px-6 py-3 sm:py-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
                   <Button
@@ -255,7 +255,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                   >
                     <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                   </Button>
-                  <h3 className="text-base sm:text-lg font-medium truncate">
+                  <h3 className="text-base sm:text-lg font-serif font-medium truncate text-foreground">
                     <span className="hidden sm:inline">
                       {formatDate(selectedLog.date)}
                     </span>
@@ -274,7 +274,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                   </Button>
                 </div>
                 {isSaving && (
-                  <div className="text-xs sm:text-sm text-gray-500 shrink-0">
+                  <div className="text-xs sm:text-sm text-muted-foreground shrink-0">
                     Saving...
                   </div>
                 )}
@@ -300,10 +300,10 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="text-center">
               <Calendar
-                className="w-12 h-12 text-gray-400 mx-auto mb-4"
+                className="w-12 h-12 text-muted-foreground mx-auto mb-4"
                 aria-hidden="true"
               />
-              <p className="text-gray-500 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Select a date to start writing
               </p>
               <Button onClick={handleToday} aria-label="Go to today's log">

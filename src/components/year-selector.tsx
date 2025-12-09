@@ -3,8 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { createYear } from "@/lib/actions";
 import type { Year } from "@prisma/client";
+import { Plus, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 interface YearSelectorProps {
   currentYear?: number;
@@ -13,192 +24,147 @@ interface YearSelectorProps {
 }
 
 export default function YearSelector({
-  currentYear,
   availableYears,
   userId,
 }: YearSelectorProps) {
-  const [selectedYear, setSelectedYear] = useState<number>(
-    currentYear || new Date().getFullYear()
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [yearToCreate, setYearToCreate] = useState<number>(
+    new Date().getFullYear()
   );
-  const [isCreating, setIsCreating] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const handleYearSelect = (year: number) => {
-    setSelectedYear(year);
-    // Navigate to the year-specific dashboard
-    router.push(`/year/${year}`);
-  };
+  // Generate options for the dropdown (Current Year ± 5)
+  const currentYearValue = new Date().getFullYear();
+  const yearOptions = Array.from(
+    { length: 11 },
+    (_, i) => currentYearValue - 5 + i
+  );
 
   const handleCreateYear = async () => {
-    if (availableYears.some((y) => y.year === selectedYear)) {
-      // Year already exists, just navigate to it
-      handleYearSelect(selectedYear);
+    // If year exists, just navigate
+    if (availableYears.some((y) => y.year === yearToCreate)) {
+      router.push(`/year/${yearToCreate}`);
+      setIsDialogOpen(false);
       return;
     }
 
     startTransition(async () => {
-      const result = await createYear(userId, selectedYear);
+      const result = await createYear(userId, yearToCreate);
       if (result.success) {
-        handleYearSelect(selectedYear);
+        setIsDialogOpen(false);
+        router.push(`/year/${yearToCreate}`);
       } else {
         console.error("Failed to create year:", result.error);
-        // TODO: Add toast notification for error
+        // Ideally show a toast here
       }
     });
   };
 
-  const currentYearValue = new Date().getFullYear();
-  const yearOptions = [];
-
-  // Generate year options (current year ± 5 years)
-  for (let i = currentYearValue - 5; i <= currentYearValue + 5; i++) {
-    yearOptions.push(i);
-  }
+  // Sort years descending (newest first)
+  const sortedYears = [...availableYears].sort((a, b) => b.year - a.year);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">ChronoMind</h1>
-        <p className="text-gray-600" id="year-selector-description">
-          Select a year to access your journal or create a new one
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Header Section */}
+      <div className="text-center space-y-4">
+        <h1 className="font-serif text-5xl md:text-6xl font-medium tracking-tight text-foreground">
+          ChronoMind
+        </h1>
+        <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
+          Construct your life's database. One year at a time.
         </p>
       </div>
 
-      {/* Existing Years */}
-      {availableYears.length > 0 && (
-        <div className="mb-8">
-          <h2
-            className="text-lg font-semibold text-gray-800 mb-4"
-            id="existing-years-heading"
+      {/* Grid Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        {/* Existing Year Cards */}
+        {sortedYears.map((year) => (
+          <Link
+            key={year.id}
+            href={`/year/${year.year}`}
+            className="block h-full"
           >
-            Your Existing Years
-          </h2>
-          <div
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3"
-            role="list"
-            aria-labelledby="existing-years-heading"
-          >
-            {availableYears
-              .sort((a, b) => b.year - a.year)
-              .map((year) => (
-                <Button
-                  key={year.id}
-                  variant={currentYear === year.year ? "default" : "outline"}
-                  onClick={() => handleYearSelect(year.year)}
-                  className="h-12 text-lg font-medium"
-                  aria-label={`Open journal for year ${year.year}`}
-                  aria-current={currentYear === year.year ? "page" : undefined}
-                  role="listitem"
-                >
-                  {year.year}
-                </Button>
-              ))}
-          </div>
-        </div>
-      )}
+            <Card className="group h-48 flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-all duration-300 hover:shadow-md bg-card border-border/60 hover:-translate-y-1">
+              <span className="font-serif text-4xl md:text-5xl font-medium text-foreground group-hover:scale-105 transition-transform duration-300">
+                {year.year}
+              </span>
+              <span className="mt-3 text-sm text-muted-foreground group-hover:text-primary transition-colors font-medium tracking-wide uppercase text-[10px]">
+                View Journal
+              </span>
+            </Card>
+          </Link>
+        ))}
 
-      {/* Year Creation */}
-      <div className="border-t pt-8">
-        <h2
-          className="text-lg font-semibold text-gray-800 mb-4"
-          id="create-year-heading"
+        {/* Create New Year Ghost Card */}
+        <button
+          onClick={() => setIsDialogOpen(true)}
+          className="h-full w-full focus:outline-none"
         >
-          Create or Access Year
-        </h2>
-
-        <div
-          className="flex flex-col sm:flex-row gap-4 items-center"
-          role="group"
-          aria-labelledby="create-year-heading"
-        >
-          <div className="flex-1">
-            <label htmlFor="year-select" className="sr-only">
-              Select Year
-            </label>
-            <select
-              id="year-select"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              disabled={isPending}
-              aria-describedby="year-select-help"
-            >
-              {yearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <Button
-            onClick={handleCreateYear}
-            disabled={isPending}
-            className="w-full sm:w-auto px-6 py-2"
-            aria-label={
-              isPending
-                ? "Loading"
-                : availableYears.some((y) => y.year === selectedYear)
-                ? `Open journal for year ${selectedYear}`
-                : `Create new journal for year ${selectedYear}`
-            }
-          >
-            {isPending
-              ? "Loading..."
-              : availableYears.some((y) => y.year === selectedYear)
-              ? "Open Year"
-              : "Create Year"}
-          </Button>
-        </div>
-
-        <div
-          className="mt-4 text-sm text-gray-500"
-          id="year-select-help"
-          role="status"
-          aria-live="polite"
-        >
-          {availableYears.some((y) => y.year === selectedYear) ? (
-            <p>This year already exists. Click "Open Year" to access it.</p>
-          ) : (
-            <p>
-              This will create a new year with empty sections for Daily Logs,
-              Quarterly Reflections, Goals, Book Notes, Lessons Learned, and
-              Creative Dump.
-            </p>
-          )}
-        </div>
+          <Card className="group h-48 flex flex-col items-center justify-center cursor-pointer border-dashed border-2 border-border hover:border-primary/50 hover:bg-secondary/30 transition-all duration-300">
+            <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mb-3 group-hover:bg-background group-hover:shadow-sm transition-all duration-300">
+              <Plus className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+            <span className="font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+              Create New Year
+            </span>
+          </Card>
+        </button>
       </div>
 
-      {/* Quick Access to Current Year */}
-      {!availableYears.some((y) => y.year === currentYearValue) && (
-        <div
-          className="mt-6 p-4 bg-blue-50 rounded-lg"
-          role="complementary"
-          aria-label="Quick start suggestion"
-        >
-          <p className="text-sm text-blue-800 mb-2">
-            Quick start: Create your {currentYearValue} journal
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSelectedYear(currentYearValue);
-              startTransition(async () => {
-                const result = await createYear(userId, currentYearValue);
-                if (result.success) {
-                  handleYearSelect(currentYearValue);
-                }
-              });
-            }}
-            disabled={isPending}
-            aria-label={`Quick create journal for current year ${currentYearValue}`}
-          >
-            Create {currentYearValue} Journal
-          </Button>
-        </div>
-      )}
+      {/* Creation Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl">
+              Start a New Journey
+            </DialogTitle>
+            <DialogDescription>
+              Select the year you want to document. This will create a fresh
+              database for logs, goals, and reflections.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-6">
+            <div className="grid gap-2">
+              <label
+                htmlFor="year"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Select Year
+              </label>
+              <select
+                id="year"
+                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                value={yearToCreate}
+                onChange={(e) => setYearToCreate(parseInt(e.target.value))}
+              >
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDialogOpen(false)}
+              disabled={isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreateYear} disabled={isPending}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {availableYears.some((y) => y.year === yearToCreate)
+                ? "Open Year"
+                : "Create Year"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

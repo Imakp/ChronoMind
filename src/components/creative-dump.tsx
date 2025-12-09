@@ -143,9 +143,9 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-4">
+      <div className="border-b border-border bg-card px-4 sm:px-6 py-4">
         <div className="flex items-center justify-end">
           <Button
             onClick={handleCreateNote}
@@ -162,7 +162,7 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {notes.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-            <p className="text-gray-500 mb-4">
+            <p className="text-muted-foreground mb-4">
               No notes yet. Start dumping your creative ideas!
             </p>
             <Button onClick={handleCreateNote} className="w-full sm:w-auto">
@@ -175,12 +175,12 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
             {notes.map((note) => (
               <div
                 key={note.id}
-                className="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                className="border border-border/60 rounded-lg bg-card shadow-sm hover-elevate cursor-pointer"
                 onClick={() => setEditingNote(note)}
               >
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="text-xs sm:text-sm text-gray-600 line-clamp-6 flex-1">
+                    <div className="text-xs sm:text-sm text-muted-foreground line-clamp-6 flex-1 font-serif">
                       {getTextPreview(note.content)}
                     </div>
                     <button
@@ -188,12 +188,12 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
                         e.stopPropagation();
                         handleDeleteNote(note.id);
                       }}
-                      className="text-gray-400 hover:text-red-600 transition-colors shrink-0"
+                      className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="text-xs text-gray-400 mt-2">
+                  <div className="text-xs text-muted-foreground/70 mt-2 font-mono">
                     {formatDate(note.createdAt)}
                   </div>
                   {savingNotes.has(note.id) && (
@@ -208,11 +208,11 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
 
       {/* OPTIMIZATION: Full-screen modal on mobile, centered on desktop */}
       {editingNote && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white sm:rounded-lg shadow-xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
+          <div className="bg-card sm:rounded-lg shadow-xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col border border-border">
             {/* Modal Header */}
-            <div className="border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-700">
+            <div className="border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3">
+              <h3 className="text-lg sm:text-xl font-serif font-semibold text-foreground">
                 Creative Note
               </h3>
               <Button
@@ -243,8 +243,8 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between">
-              <div className="text-xs sm:text-sm text-gray-500 truncate">
+            <div className="border-t border-border px-4 sm:px-6 py-3 flex items-center justify-between">
+              <div className="text-xs sm:text-sm text-muted-foreground truncate font-mono">
                 Created {formatDate(editingNote.createdAt)}
               </div>
               {savingNotes.has(editingNote.id) && (

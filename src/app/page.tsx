@@ -15,9 +15,10 @@ export default async function Home() {
   const availableYears = yearsResult.success ? yearsResult.data || [] : [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Centered Main Content Area */}
+      <main className="flex-1 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-5xl">
           <YearSelector
             availableYears={availableYears}
             userId={session.user.id}

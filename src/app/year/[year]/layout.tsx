@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserYears } from "@/lib/actions";
-import { YearShell } from "@/components/year-shell";
+import { AppShell } from "@/components/layout/app-shell";
 
 interface YearLayoutProps {
   children: React.ReactNode;
@@ -41,8 +41,8 @@ export default async function YearLayout({
   }
 
   return (
-    <YearShell year={userYear} userId={session.user.id}>
+    <AppShell year={userYear.year} userId={session.user.id}>
       {children}
-    </YearShell>
+    </AppShell>
   );
 }

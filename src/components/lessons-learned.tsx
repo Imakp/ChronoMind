@@ -185,9 +185,9 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-4">
+      <div className="border-b border-border bg-card px-4 sm:px-6 py-4">
         <div className="flex items-center justify-end">
           <Button
             onClick={handleCreateLesson}
@@ -204,7 +204,7 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
       <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         {lessons.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-            <p className="text-gray-500 mb-4">
+            <p className="text-muted-foreground mb-4">
               No lessons yet. Start capturing your insights!
             </p>
             <Button onClick={handleCreateLesson} className="w-full sm:w-auto">
@@ -217,12 +217,12 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
             {lessons.map((lesson) => (
               <div
                 key={lesson.id}
-                className="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                className="border border-border/60 rounded-lg bg-card shadow-sm hover-elevate cursor-pointer"
                 onClick={() => setEditingLesson(lesson)}
               >
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="font-semibold text-gray-900 flex-1 line-clamp-2 text-sm sm:text-base">
+                    <h3 className="font-serif font-semibold text-foreground flex-1 line-clamp-2 text-sm sm:text-base">
                       {lesson.title}
                     </h3>
                     <button
@@ -230,12 +230,12 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
                         e.stopPropagation();
                         handleDeleteLesson(lesson.id);
                       }}
-                      className="text-gray-400 hover:text-red-600 transition-colors shrink-0"
+                      className="text-muted-foreground hover:text-destructive transition-colors shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  <div className="text-xs sm:text-sm text-gray-600 line-clamp-4 mb-2">
+                  <div className="text-xs sm:text-sm text-muted-foreground line-clamp-4 mb-2">
                     {/* Display plain text preview of content */}
                     {lesson.content &&
                     typeof lesson.content === "object" &&
@@ -249,11 +249,11 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
                           .join(" ") || "Empty lesson"
                       : "Empty lesson"}
                   </div>
-                  <div className="text-xs text-gray-400">
+                  <div className="text-xs text-muted-foreground/70 font-mono">
                     {formatDate(lesson.createdAt)}
                   </div>
                   {savingLessons.has(lesson.id) && (
-                    <div className="text-xs text-blue-600 mt-2">Saving...</div>
+                    <div className="text-xs text-primary mt-2">Saving...</div>
                   )}
                 </div>
               </div>
@@ -264,10 +264,10 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
 
       {/* OPTIMIZATION: Full-screen modal on mobile, centered on desktop */}
       {editingLesson && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-0 sm:p-4">
-          <div className="bg-white sm:rounded-lg shadow-xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-4">
+          <div className="bg-card sm:rounded-lg shadow-xl w-full max-w-4xl h-full sm:h-[90vh] flex flex-col border border-border">
             {/* Modal Header */}
-            <div className="border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
+            <div className="border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3">
               <input
                 type="text"
                 value={editingLesson.title}
@@ -305,8 +305,8 @@ export function LessonsLearned({ yearId }: LessonsLearnedProps) {
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between">
-              <div className="text-xs sm:text-sm text-gray-500 truncate">
+            <div className="border-t border-border px-4 sm:px-6 py-3 flex items-center justify-between">
+              <div className="text-xs sm:text-sm text-muted-foreground truncate font-mono">
                 Created {formatDate(editingLesson.createdAt)}
               </div>
               {savingLessons.has(editingLesson.id) && (

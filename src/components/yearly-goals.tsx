@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   createGoal,
   createTask,
@@ -16,18 +16,45 @@ import {
   updateTask,
   updateSubTask,
 } from "@/lib/actions";
-import type { GoalWithRelations } from "@/types";
+import type {
+  GoalWithRelations,
+  TaskWithRelations,
+  SubTaskWithRelations,
+} from "@/types";
 import {
-  ChevronDown,
-  ChevronRight,
   Plus,
   Trash2,
   Edit2,
   Check,
   X,
+  MoreHorizontal,
+  ChevronRight,
+  ChevronDown,
+  Target,
+  Calendar,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/lib/error-handler";
+import { cn } from "@/lib/utils";
 
 interface YearlyGoalsProps {
   yearId: string;
@@ -36,32 +63,20 @@ interface YearlyGoalsProps {
 
 export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
   const [goals, setGoals] = useState<GoalWithRelations[]>([]);
-  const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
-  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
-  const [editingGoal, setEditingGoal] = useState<string | null>(null);
-  const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [editingSubTask, setEditingSubTask] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
-  const [newTaskTitle, setNewTaskTitle] = useState<{ [key: string]: string }>(
-    {}
-  );
-  const [newSubTaskTitle, setNewSubTaskTitle] = useState<{
-    [key: string]: string;
-  }>({});
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   useEffect(() => {
+    const loadGoals = async () => {
+      const result = await getGoals(yearId);
+      if (result.success && result.data) {
+        setGoals(result.data);
+      }
+    };
     loadGoals();
   }, [yearId]);
-
-  const loadGoals = async () => {
-    const result = await getGoals(yearId);
-    if (result.success && result.data) {
-      setGoals(result.data);
-    }
-  };
 
   const handleCreateGoal = async () => {
     if (!newGoalTitle.trim()) {
@@ -73,568 +88,545 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
       const result = await createGoal(yearId, newGoalTitle.trim());
       if (result.success) {
         setNewGoalTitle("");
+        setIsAddingGoal(false);
         router.refresh();
         toast.success("Goal created successfully");
+        const updated = await getGoals(yearId);
+        if (updated.success && updated.data) setGoals(updated.data);
       } else {
         toast.error(getUserFriendlyError(result.error));
       }
     });
   };
 
-  const handleCreateTask = async (goalId: string) => {
-    const title = newTaskTitle[goalId];
-    if (!title?.trim()) {
-      toast.error("Please enter a task title");
-      return;
+  return (
+    <div className="max-w-5xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border/40 pb-6">
+        <div>
+          <h2 className="font-serif text-3xl sm:text-4xl font-medium text-foreground tracking-tight">
+            {year} Goals
+          </h2>
+          <p className="text-muted-foreground mt-2 text-lg">
+            High-level objectives broken down into actionable phases.
+          </p>
+        </div>
+        <Button
+          onClick={() => setIsAddingGoal(!isAddingGoal)}
+          size="lg"
+          className={cn(
+            "shadow-sm transition-all",
+            isAddingGoal && "bg-muted text-muted-foreground hover:bg-muted/80"
+          )}
+        >
+          {isAddingGoal ? (
+            <X className="w-4 h-4 mr-2" />
+          ) : (
+            <Plus className="w-4 h-4 mr-2" />
+          )}
+          {isAddingGoal ? "Cancel" : "New Goal"}
+        </Button>
+      </div>
+
+      {/* Goal Creation Input */}
+      <AnimatePresence>
+        {isAddingGoal && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
+            exit={{ opacity: 0, y: -20, height: 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="border-2 border-primary/10 shadow-md bg-secondary/5">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Input
+                    placeholder="What is your main objective? (e.g., Run a Marathon)"
+                    value={newGoalTitle}
+                    onChange={(e) => setNewGoalTitle(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleCreateGoal()}
+                    autoFocus
+                    className="flex-1 text-lg h-12"
+                  />
+                  <Button
+                    onClick={handleCreateGoal}
+                    disabled={!newGoalTitle.trim() || isPending}
+                    size="lg"
+                    className="h-12 px-8"
+                  >
+                    Create Goal
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Goals Grid */}
+      <div className="grid gap-6">
+        {goals.length === 0 && !isAddingGoal ? (
+          <div className="text-center py-24 border-2 border-dashed border-border/50 rounded-xl bg-secondary/5">
+            <Target className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
+            <h3 className="text-xl font-medium text-foreground mb-2">
+              No goals set for {year}
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              Start by defining what success looks like.
+            </p>
+            <Button onClick={() => setIsAddingGoal(true)} variant="outline">
+              Create Your First Goal
+            </Button>
+          </div>
+        ) : (
+          goals.map((goal, i) => (
+            <GoalItem key={goal.id} goal={goal} index={i} router={router} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// --- Sub-components for cleaner structure ---
+
+function GoalItem({
+  goal,
+  index,
+  router,
+}: {
+  goal: GoalWithRelations;
+  index: number;
+  router: any;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(goal.title);
+  const [isPending, startTransition] = useTransition();
+
+  const handleUpdate = () => {
+    if (!editTitle.trim()) return;
+    startTransition(async () => {
+      await updateGoal(goal.id, editTitle);
+      setIsEditing(false);
+      router.refresh();
+    });
+  };
+
+  const handleDelete = () => {
+    if (confirm("Delete this goal and all tasks?")) {
+      startTransition(async () => {
+        await deleteGoal(goal.id);
+        router.refresh();
+      });
     }
+  };
 
+  // Status Logic
+  const getStatus = (p: number) => {
+    if (p === 100)
+      return {
+        label: "Completed",
+        color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      };
+    if (p >= 66)
+      return {
+        label: "On Track",
+        color: "bg-blue-50 text-blue-700 border-blue-200",
+      };
+    if (p >= 33)
+      return {
+        label: "In Progress",
+        color: "bg-amber-50 text-amber-700 border-amber-200",
+      };
+    if (p > 0)
+      return {
+        label: "Started",
+        color: "bg-orange-50 text-orange-700 border-orange-200",
+      };
+    return {
+      label: "Not Started",
+      color: "bg-secondary text-muted-foreground border-border",
+    };
+  };
+
+  const status = getStatus(goal.percentage);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+    >
+      <Card className="overflow-hidden border-border/60 hover:border-border hover:shadow-sm transition-all duration-300">
+        <CardHeader className="pb-4 bg-gradient-to-r from-background to-secondary/20">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-3 flex-1 min-w-0">
+              <div className="flex items-center gap-3">
+                {isEditing ? (
+                  <div className="flex items-center gap-2 flex-1 max-w-md">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="h-8 font-serif text-lg"
+                      autoFocus
+                    />
+                    <Button size="sm" onClick={handleUpdate}>
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditing(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <CardTitle className="font-serif text-2xl text-foreground flex items-center gap-3">
+                    {goal.title}
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "font-sans font-normal border ml-2",
+                        status.color
+                      )}
+                    >
+                      {status.label}
+                    </Badge>
+                  </CardTitle>
+                )}
+              </div>
+              <div className="flex items-center gap-3 max-w-md">
+                <Progress value={goal.percentage} className="h-2 flex-1" />
+                <span className="text-xs font-mono text-muted-foreground w-12 text-right">
+                  {goal.percentage.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                  <Edit2 className="w-4 h-4 mr-2" /> Edit Title
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete Goal
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="roadmap" className="border-none">
+              <AccordionTrigger className="px-6 py-3 text-sm text-muted-foreground hover:no-underline bg-secondary/10 hover:bg-secondary/20 transition-colors">
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  View Roadmap ({goal.tasks.length} Phases)
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="px-6 pb-6 pt-4 bg-card/50">
+                <TaskList goalId={goal.id} tasks={goal.tasks} router={router} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+function TaskList({
+  goalId,
+  tasks,
+  router,
+}: {
+  goalId: string;
+  tasks: TaskWithRelations[];
+  router: any;
+}) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleCreateTask = () => {
+    if (!newTaskTitle.trim()) return;
     startTransition(async () => {
-      const result = await createTask(goalId, title.trim());
-      if (result.success) {
-        setNewTaskTitle({ ...newTaskTitle, [goalId]: "" });
-        router.refresh();
-        toast.success("Task created successfully");
-      } else {
-        toast.error(getUserFriendlyError(result.error));
-      }
+      await createTask(goalId, newTaskTitle);
+      setNewTaskTitle("");
+      setIsAdding(false);
+      router.refresh();
     });
   };
 
-  const handleCreateSubTask = async (taskId: string) => {
-    const title = newSubTaskTitle[taskId];
-    if (!title?.trim()) return;
+  return (
+    <div className="space-y-4">
+      {tasks.map((task) => (
+        <TaskItem key={task.id} task={task} router={router} />
+      ))}
+      {isAdding ? (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-2 items-center"
+        >
+          <Input
+            placeholder="Phase title..."
+            value={newTaskTitle}
+            onChange={(e) => setNewTaskTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleCreateTask()}
+            className="h-9"
+            autoFocus
+          />
+          <Button size="sm" onClick={handleCreateTask}>
+            Add
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>
+            Cancel
+          </Button>
+        </motion.div>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setIsAdding(true)}
+          className="text-muted-foreground hover:text-primary w-full justify-start pl-0 hover:bg-transparent"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Phase
+        </Button>
+      )}
+    </div>
+  );
+}
 
+function TaskItem({ task, router }: { task: TaskWithRelations; router: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [isPending, startTransition] = useTransition();
+
+  const handleUpdate = () => {
+    if (!editTitle.trim()) return;
     startTransition(async () => {
-      const result = await createSubTask(taskId, title.trim());
-      if (result.success) {
-        setNewSubTaskTitle({ ...newSubTaskTitle, [taskId]: "" });
-        router.refresh();
-      }
+      await updateTask(task.id, editTitle);
+      setIsEditing(false);
+      router.refresh();
     });
   };
 
-  const handleToggleSubTask = async (subtaskId: string) => {
+  const handleDelete = () => {
+    if (confirm("Delete this phase?")) {
+      startTransition(async () => {
+        await deleteTask(task.id);
+        router.refresh();
+      });
+    }
+  };
+
+  const isComplete = task.percentage === 100;
+
+  return (
+    <div className="border border-border/50 rounded-lg bg-background shadow-sm hover:shadow-md transition-all duration-200 group/task">
+      {/* Task Header Row */}
+      <div className="flex items-center gap-3 p-3 rounded-md">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-1 hover:bg-secondary rounded text-muted-foreground transition-colors"
+        >
+          {isOpen ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
+        </button>
+        {isComplete ? (
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+        ) : (
+          <Circle className="w-5 h-5 text-muted-foreground shrink-0" />
+        )}
+        <div className="flex-1 min-w-0">
+          {isEditing ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="h-7 text-sm"
+                autoFocus
+              />
+              <Button size="icon-sm" className="h-7 w-7" onClick={handleUpdate}>
+                <Check className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <span
+                className={cn(
+                  "font-medium text-sm sm:text-base truncate",
+                  isComplete && "text-muted-foreground line-through"
+                )}
+              >
+                {task.title}
+              </span>
+              <div className="flex items-center gap-3 opacity-0 group-hover/task:opacity-100 transition-opacity">
+                {task.percentage > 0 && task.percentage < 100 && (
+                  <span className="text-xs font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">
+                    {task.percentage.toFixed(0)}%
+                  </span>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="h-6 w-6"
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit2 className="w-3 h-3 text-muted-foreground" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="h-6 w-6 hover:text-destructive"
+                  onClick={handleDelete}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Subtasks Container */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-12 pr-4 pb-4 pt-0">
+              <SubTaskList
+                taskId={task.id}
+                subtasks={task.subtasks}
+                router={router}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function SubTaskList({
+  taskId,
+  subtasks,
+  router,
+}: {
+  taskId: string;
+  subtasks: SubTaskWithRelations[];
+  router: any;
+}) {
+  const [isAdding, setIsAdding] = useState(false);
+  const [title, setTitle] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  const handleAdd = () => {
+    if (!title.trim()) return;
+    startTransition(async () => {
+      await createSubTask(taskId, title);
+      setTitle("");
+      setIsAdding(false);
+      router.refresh();
+    });
+  };
+
+  const handleToggle = (subtaskId: string) => {
     startTransition(async () => {
       await toggleSubTask(subtaskId);
       router.refresh();
     });
   };
 
-  const handleDeleteGoal = async (goalId: string) => {
-    if (
-      confirm("Are you sure you want to delete this goal and all its tasks?")
-    ) {
-      startTransition(async () => {
-        const result = await deleteGoal(goalId);
-        if (result.success) {
-          router.refresh();
-          toast.success("Goal deleted successfully");
-        } else {
-          toast.error(getUserFriendlyError(result.error));
-        }
-      });
-    }
-  };
-
-  const handleDeleteTask = async (taskId: string) => {
-    if (
-      confirm("Are you sure you want to delete this task and all its subtasks?")
-    ) {
-      startTransition(async () => {
-        await deleteTask(taskId);
-        router.refresh();
-      });
-    }
-  };
-
-  const handleDeleteSubTask = async (subtaskId: string) => {
-    if (confirm("Are you sure you want to delete this subtask?")) {
-      startTransition(async () => {
-        await deleteSubTask(subtaskId);
-        router.refresh();
-      });
-    }
-  };
-
-  const startEditGoal = (goalId: string, currentTitle: string) => {
-    setEditingGoal(goalId);
-    setEditValue(currentTitle);
-  };
-
-  const startEditTask = (taskId: string, currentTitle: string) => {
-    setEditingTask(taskId);
-    setEditValue(currentTitle);
-  };
-
-  const startEditSubTask = (subtaskId: string, currentTitle: string) => {
-    setEditingSubTask(subtaskId);
-    setEditValue(currentTitle);
-  };
-
-  const saveEditGoal = async (goalId: string) => {
-    if (!editValue.trim()) {
-      toast.error("Goal title cannot be empty");
-      return;
-    }
+  const handleDelete = (subtaskId: string) => {
     startTransition(async () => {
-      const result = await updateGoal(goalId, editValue.trim());
-      if (result.success) {
-        setEditingGoal(null);
-        setEditValue("");
-        router.refresh();
-        toast.success("Goal updated successfully");
-      } else {
-        toast.error(getUserFriendlyError(result.error));
-      }
-    });
-  };
-
-  const saveEditTask = async (taskId: string) => {
-    if (!editValue.trim()) return;
-    startTransition(async () => {
-      await updateTask(taskId, editValue.trim());
-      setEditingTask(null);
-      setEditValue("");
+      await deleteSubTask(subtaskId);
       router.refresh();
     });
-  };
-
-  const saveEditSubTask = async (subtaskId: string) => {
-    if (!editValue.trim()) return;
-    startTransition(async () => {
-      await updateSubTask(subtaskId, editValue.trim());
-      setEditingSubTask(null);
-      setEditValue("");
-      router.refresh();
-    });
-  };
-
-  const cancelEdit = () => {
-    setEditingGoal(null);
-    setEditingTask(null);
-    setEditingSubTask(null);
-    setEditValue("");
-  };
-
-  const toggleGoalExpanded = (goalId: string) => {
-    const newExpanded = new Set(expandedGoals);
-    if (newExpanded.has(goalId)) {
-      newExpanded.delete(goalId);
-    } else {
-      newExpanded.add(goalId);
-    }
-    setExpandedGoals(newExpanded);
-  };
-
-  const toggleTaskExpanded = (taskId: string) => {
-    const newExpanded = new Set(expandedTasks);
-    if (newExpanded.has(taskId)) {
-      newExpanded.delete(taskId);
-    } else {
-      newExpanded.add(taskId);
-    }
-    setExpandedTasks(newExpanded);
-  };
-
-  const getProgressColor = (percentage: number) => {
-    if (percentage === 0) return "bg-gray-200";
-    if (percentage < 33) return "bg-red-500";
-    if (percentage < 66) return "bg-yellow-500";
-    return "bg-green-500";
   };
 
   return (
-    <div className="h-full overflow-y-auto p-4 sm:p-6 bg-white">
-      <div className="max-w-4xl mx-auto">
-        {/* Create New Goal */}
-        <div className="mb-4 sm:mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              type="text"
-              value={newGoalTitle}
-              onChange={(e) => setNewGoalTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleCreateGoal();
-              }}
-              placeholder="Add a new goal..."
-              className="flex-1 px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <Button
-              onClick={handleCreateGoal}
-              disabled={!newGoalTitle.trim()}
-              className="w-full sm:w-auto"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Add Goal
-            </Button>
-          </div>
+    <div className="space-y-1 relative">
+      {/* Connector Line */}
+      <div className="absolute left-[-19px] top-0 bottom-4 w-px bg-border/50" />
+      {subtasks.map((st) => (
+        <div
+          key={st.id}
+          className="group/sub flex items-center gap-3 py-1.5 text-sm min-h-[32px]"
+        >
+          {/* Connector Dot */}
+          <div className="absolute left-[-22px] w-1.5 h-1.5 rounded-full bg-border" />
+          <button
+            onClick={() => handleToggle(st.id)}
+            className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+          >
+            {st.isComplete ? (
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+            ) : (
+              <Circle className="w-4 h-4" />
+            )}
+          </button>
+          <span
+            className={cn(
+              "flex-1 truncate",
+              st.isComplete && "text-muted-foreground line-through"
+            )}
+          >
+            {st.title}
+          </span>
+          <button
+            onClick={() => handleDelete(st.id)}
+            className="opacity-0 group-hover/sub:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+          >
+            <X className="w-3 h-3" />
+          </button>
         </div>
-
-        {/* Goals List */}
-        {goals.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm border border-gray-200 px-4">
-            <div className="text-6xl mb-4">🎯</div>
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-              No Goals Yet
-            </h3>
-            <p className="text-sm sm:text-base text-gray-600">
-              Start by adding your first goal for {year}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3 sm:space-y-4">
-            {goals.map((goal) => (
-              <div
-                key={goal.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200"
-              >
-                {/* Goal Header */}
-                <div className="p-3 sm:p-4">
-                  <div className="flex items-start gap-2 sm:gap-3">
-                    <button
-                      onClick={() => toggleGoalExpanded(goal.id)}
-                      className="mt-1 text-gray-500 hover:text-gray-700 shrink-0"
-                    >
-                      {expandedGoals.has(goal.id) ? (
-                        <ChevronDown className="w-5 h-5" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5" />
-                      )}
-                    </button>
-                    <div className="flex-1 min-w-0">
-                      {editingGoal === goal.id ? (
-                        <div className="flex gap-2 mb-2">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") saveEditGoal(goal.id);
-                              if (e.key === "Escape") cancelEdit();
-                            }}
-                            className="flex-1 px-2 sm:px-3 py-1 text-sm sm:text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            autoFocus
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => saveEditGoal(goal.id)}
-                            className="shrink-0"
-                          >
-                            <Check className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={cancelEdit}
-                            className="shrink-0"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex-1 min-w-0 break-words">
-                            {goal.title}
-                          </h3>
-                          <div className="flex gap-1 sm:gap-2 shrink-0">
-                            <button
-                              onClick={() => startEditGoal(goal.id, goal.title)}
-                              className="text-gray-500 hover:text-blue-600"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteGoal(goal.id)}
-                              className="text-gray-500 hover:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      {/* Progress Bar */}
-                      <div className="mb-2">
-                        <div className="flex items-center justify-between text-xs sm:text-sm text-gray-600 mb-1">
-                          <span>Progress</span>
-                          <span className="font-semibold">
-                            {goal.percentage.toFixed(0)}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all ${getProgressColor(
-                              goal.percentage
-                            )}`}
-                            style={{ width: `${goal.percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                      <div className="text-xs sm:text-sm text-gray-500">
-                        {goal.tasks.length} task
-                        {goal.tasks.length !== 1 ? "s" : ""}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expanded Goal Content */}
-                  {expandedGoals.has(goal.id) && (
-                    <div className="mt-3 sm:mt-4 ml-6 sm:ml-8 space-y-3">
-                      {/* Add Task Input */}
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={newTaskTitle[goal.id] || ""}
-                          onChange={(e) =>
-                            setNewTaskTitle({
-                              ...newTaskTitle,
-                              [goal.id]: e.target.value,
-                            })
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleCreateTask(goal.id);
-                          }}
-                          placeholder="Add a task..."
-                          className="flex-1 px-2 sm:px-3 py-1 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <Button
-                          size="sm"
-                          onClick={() => handleCreateTask(goal.id)}
-                          disabled={!newTaskTitle[goal.id]?.trim()}
-                          className="shrink-0"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                      </div>
-
-                      {/* Tasks List */}
-                      {goal.tasks.map((task) => (
-                        <div
-                          key={task.id}
-                          className="bg-gray-50 rounded-md p-2 sm:p-3 border border-gray-200"
-                        >
-                          <div className="flex items-start gap-2">
-                            <button
-                              onClick={() => toggleTaskExpanded(task.id)}
-                              className="mt-1 text-gray-500 hover:text-gray-700 shrink-0"
-                            >
-                              {expandedTasks.has(task.id) ? (
-                                <ChevronDown className="w-4 h-4" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4" />
-                              )}
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              {editingTask === task.id ? (
-                                <div className="flex gap-2 mb-2">
-                                  <input
-                                    type="text"
-                                    value={editValue}
-                                    onChange={(e) =>
-                                      setEditValue(e.target.value)
-                                    }
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter")
-                                        saveEditTask(task.id);
-                                      if (e.key === "Escape") cancelEdit();
-                                    }}
-                                    className="flex-1 px-2 py-1 text-xs sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    autoFocus
-                                  />
-                                  <Button
-                                    size="sm"
-                                    onClick={() => saveEditTask(task.id)}
-                                    className="shrink-0"
-                                  >
-                                    <Check className="w-3 h-3" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={cancelEdit}
-                                    className="shrink-0"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                  <h4 className="text-sm sm:text-base font-medium text-gray-900 flex-1 min-w-0 break-words">
-                                    {task.title}
-                                  </h4>
-                                  <div className="flex gap-1 sm:gap-2 shrink-0">
-                                    <button
-                                      onClick={() =>
-                                        startEditTask(task.id, task.title)
-                                      }
-                                      className="text-gray-500 hover:text-blue-600"
-                                    >
-                                      <Edit2 className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteTask(task.id)}
-                                      className="text-gray-500 hover:text-red-600"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                              {/* Task Progress Bar */}
-                              <div className="mb-2">
-                                <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                  <span>Progress</span>
-                                  <span className="font-semibold">
-                                    {task.percentage.toFixed(0)}%
-                                  </span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                  <div
-                                    className={`h-1.5 rounded-full transition-all ${getProgressColor(
-                                      task.percentage
-                                    )}`}
-                                    style={{ width: `${task.percentage}%` }}
-                                  />
-                                </div>
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {task.subtasks.length} subtask
-                                {task.subtasks.length !== 1 ? "s" : ""}
-                              </div>
-
-                              {/* Expanded Task Content */}
-                              {expandedTasks.has(task.id) && (
-                                <div className="mt-3 space-y-2">
-                                  {/* Add SubTask Input */}
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="text"
-                                      value={newSubTaskTitle[task.id] || ""}
-                                      onChange={(e) =>
-                                        setNewSubTaskTitle({
-                                          ...newSubTaskTitle,
-                                          [task.id]: e.target.value,
-                                        })
-                                      }
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter")
-                                          handleCreateSubTask(task.id);
-                                      }}
-                                      placeholder="Add a subtask..."
-                                      className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() =>
-                                        handleCreateSubTask(task.id)
-                                      }
-                                      disabled={
-                                        !newSubTaskTitle[task.id]?.trim()
-                                      }
-                                      className="shrink-0"
-                                    >
-                                      <Plus className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-
-                                  {/* SubTasks List */}
-                                  {task.subtasks.map((subtask) => (
-                                    <div
-                                      key={subtask.id}
-                                      className="flex items-center gap-2 bg-white rounded p-2 border border-gray-200"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={subtask.isComplete}
-                                        onChange={() =>
-                                          handleToggleSubTask(subtask.id)
-                                        }
-                                        className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 shrink-0"
-                                      />
-                                      {editingSubTask === subtask.id ? (
-                                        <div className="flex gap-2 flex-1 min-w-0">
-                                          <input
-                                            type="text"
-                                            value={editValue}
-                                            onChange={(e) =>
-                                              setEditValue(e.target.value)
-                                            }
-                                            onKeyDown={(e) => {
-                                              if (e.key === "Enter")
-                                                saveEditSubTask(subtask.id);
-                                              if (e.key === "Escape")
-                                                cancelEdit();
-                                            }}
-                                            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            autoFocus
-                                          />
-                                          <Button
-                                            size="sm"
-                                            onClick={() =>
-                                              saveEditSubTask(subtask.id)
-                                            }
-                                            className="shrink-0"
-                                          >
-                                            <Check className="w-3 h-3" />
-                                          </Button>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={cancelEdit}
-                                            className="shrink-0"
-                                          >
-                                            <X className="w-3 h-3" />
-                                          </Button>
-                                        </div>
-                                      ) : (
-                                        <>
-                                          <span
-                                            className={`flex-1 text-xs sm:text-sm min-w-0 break-words ${
-                                              subtask.isComplete
-                                                ? "line-through text-gray-500"
-                                                : "text-gray-900"
-                                            }`}
-                                          >
-                                            {subtask.title}
-                                          </span>
-                                          <div className="flex gap-1 shrink-0">
-                                            <button
-                                              onClick={() =>
-                                                startEditSubTask(
-                                                  subtask.id,
-                                                  subtask.title
-                                                )
-                                              }
-                                              className="text-gray-500 hover:text-blue-600"
-                                            >
-                                              <Edit2 className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                              onClick={() =>
-                                                handleDeleteSubTask(subtask.id)
-                                              }
-                                              className="text-gray-500 hover:text-red-600"
-                                            >
-                                              <Trash2 className="w-3 h-3" />
-                                            </button>
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      ))}
+      {isAdding ? (
+        <div className="flex gap-2 items-center mt-2 pl-7">
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+            placeholder="Next step..."
+            className="h-8 text-sm"
+            autoFocus
+          />
+          <Button size="sm" className="h-8" onClick={handleAdd}>
+            Add
+          </Button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setIsAdding(true)}
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary mt-2 pl-1 transition-colors"
+        >
+          <Plus className="w-3 h-3" />
+          Add Step
+        </button>
+      )}
     </div>
   );
 }

@@ -3,6 +3,8 @@
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   createGenre,
   createBook,
@@ -14,16 +16,7 @@ import {
   deleteChapter,
 } from "@/lib/actions";
 import type { GenreWithRelations } from "@/types";
-import {
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  BookOpen,
-  FolderOpen,
-  Trash2,
-  Menu,
-  X,
-} from "lucide-react";
+import { Plus, BookOpen, Trash2, ArrowLeft, Edit2, X } from "lucide-react";
 import { EditorWithPersistence } from "@/components/editor/editor-with-persistence";
 
 interface BookNotesProps {
@@ -31,25 +24,18 @@ interface BookNotesProps {
   year: number;
 }
 
+type ViewMode = "library" | "book" | "chapter";
+
 export function BookNotes({ yearId, year }: BookNotesProps) {
   const [genres, setGenres] = useState<GenreWithRelations[]>([]);
-  const [expandedGenres, setExpandedGenres] = useState<Set<string>>(new Set());
-  const [expandedBooks, setExpandedBooks] = useState<Set<string>>(new Set());
-  const [selectedChapter, setSelectedChapter] = useState<{
-    id: string;
-    title: string;
-    content: any;
-    highlights?: any[];
-  } | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("library");
+  const [selectedBook, setSelectedBook] = useState<any | null>(null);
+  const [selectedChapter, setSelectedChapter] = useState<any | null>(null);
   const [newGenreName, setNewGenreName] = useState("");
   const [newBookTitle, setNewBookTitle] = useState<{ [key: string]: string }>(
     {}
   );
-  const [newChapterTitle, setNewChapterTitle] = useState<{
-    [key: string]: string;
-  }>({});
-  // OPTIMIZATION: Track mobile sidebar visibility
-  const [showMobileSidebar, setShowMobileSidebar] = useState(true);
+  const [newChapterTitle, setNewChapterTitle] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -66,7 +52,6 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
 
   const handleCreateGenre = async () => {
     if (!newGenreName.trim()) return;
-
     startTransition(async () => {
       const result = await createGenre(yearId, newGenreName.trim());
       if (result.success) {
@@ -79,7 +64,6 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   const handleCreateBook = async (genreId: string) => {
     const title = newBookTitle[genreId];
     if (!title?.trim()) return;
-
     startTransition(async () => {
       const result = await createBook(genreId, title.trim());
       if (result.success) {
@@ -89,31 +73,37 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
     });
   };
 
-  const handleCreateChapter = async (bookId: string) => {
-    const title = newChapterTitle[bookId];
-    if (!title?.trim()) return;
-
+  const handleCreateChapter = async () => {
+    if (!selectedBook || !newChapterTitle.trim()) return;
     startTransition(async () => {
-      const result = await createChapter(bookId, title.trim(), {
-        type: "doc",
-        content: [],
-      });
+      const result = await createChapter(
+        selectedBook.id,
+        newChapterTitle.trim(),
+        {
+          type: "doc",
+          content: [],
+        }
+      );
       if (result.success) {
-        setNewChapterTitle({ ...newChapterTitle, [bookId]: "" });
+        setNewChapterTitle("");
         router.refresh();
       }
     });
   };
 
-  const handleChapterClick = (chapter: any) => {
+  const handleOpenBook = (book: any) => {
+    setSelectedBook(book);
+    setViewMode("book");
+  };
+
+  const handleOpenChapter = (chapter: any) => {
     setSelectedChapter({
       id: chapter.id,
       title: chapter.title,
       content: chapter.content || { type: "doc", content: [] },
       highlights: chapter.highlights || [],
     });
-    // OPTIMIZATION: Hide sidebar on mobile when chapter is selected
-    setShowMobileSidebar(false);
+    setViewMode("chapter");
   };
 
   const handleChapterSave = async (content: any) => {
@@ -122,11 +112,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   };
 
   const handleDeleteGenre = async (genreId: string) => {
-    if (
-      confirm(
-        "Are you sure you want to delete this genre and all its books and chapters?"
-      )
-    ) {
+    if (confirm("Delete this genre and all its books?")) {
       startTransition(async () => {
         await deleteGenre(genreId);
         router.refresh();
@@ -135,20 +121,21 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   };
 
   const handleDeleteBook = async (bookId: string) => {
-    if (
-      confirm("Are you sure you want to delete this book and all its chapters?")
-    ) {
+    if (confirm("Delete this book and all its chapters?")) {
       startTransition(async () => {
         await deleteBook(bookId);
+        setViewMode("library");
+        setSelectedBook(null);
         router.refresh();
       });
     }
   };
 
   const handleDeleteChapter = async (chapterId: string) => {
-    if (confirm("Are you sure you want to delete this chapter?")) {
+    if (confirm("Delete this chapter?")) {
       if (selectedChapter?.id === chapterId) {
         setSelectedChapter(null);
+        setViewMode("book");
       }
       startTransition(async () => {
         await deleteChapter(chapterId);
@@ -157,522 +144,308 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
     }
   };
 
-  const toggleGenreExpanded = (genreId: string) => {
-    const newExpanded = new Set(expandedGenres);
-    if (newExpanded.has(genreId)) {
-      newExpanded.delete(genreId);
-    } else {
-      newExpanded.add(genreId);
-    }
-    setExpandedGenres(newExpanded);
+  const getBookColor = (index: number) => {
+    const colors = [
+      "from-amber-100 to-amber-200 border-amber-300",
+      "from-blue-100 to-blue-200 border-blue-300",
+      "from-emerald-100 to-emerald-200 border-emerald-300",
+      "from-rose-100 to-rose-200 border-rose-300",
+      "from-purple-100 to-purple-200 border-purple-300",
+      "from-cyan-100 to-cyan-200 border-cyan-300",
+    ];
+    return colors[index % colors.length];
   };
 
-  const toggleBookExpanded = (bookId: string) => {
-    const newExpanded = new Set(expandedBooks);
-    if (newExpanded.has(bookId)) {
-      newExpanded.delete(bookId);
-    } else {
-      newExpanded.add(bookId);
-    }
-    setExpandedBooks(newExpanded);
-  };
-
-  return (
-    /* OPTIMIZATION: Stack vertically on mobile, horizontal on desktop */
-    <div className="h-full flex flex-col md:flex-row relative">
-      {/* OPTIMIZATION: Mobile sidebar overlay - slides in from left */}
-      <div
-        className={`
-          md:hidden fixed inset-0 z-50 bg-black bg-opacity-50 transition-opacity
-          ${showMobileSidebar ? "opacity-100" : "opacity-0 pointer-events-none"}
-        `}
-        onClick={() => setShowMobileSidebar(false)}
-      >
-        <div
-          className={`
-            w-[85%] max-w-sm h-full bg-gray-50 shadow-xl transform transition-transform
-            ${showMobileSidebar ? "translate-x-0" : "-translate-x-full"}
-          `}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Mobile sidebar header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-            <h2 className="text-lg font-bold text-gray-900">Book Notes</h2>
-            <button
-              onClick={() => setShowMobileSidebar(false)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Mobile sidebar content */}
-          <div className="overflow-y-auto h-[calc(100%-64px)] p-3">
-            {/* Create New Genre */}
-            <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 p-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newGenreName}
-                  onChange={(e) => setNewGenreName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleCreateGenre();
-                  }}
-                  placeholder="Add genre..."
-                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <Button
-                  size="sm"
-                  onClick={handleCreateGenre}
-                  disabled={!newGenreName.trim()}
-                >
-                  <Plus className="w-3 h-3" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Genres List (same content as desktop) */}
-            {genres.length === 0 ? (
-              <div className="text-center py-8 bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="text-4xl mb-2">📚</div>
-                <p className="text-sm text-gray-600">No genres yet</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {genres.map((genre) => (
-                  <div
-                    key={genre.id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200"
-                  >
-                    {/* Genre Header */}
-                    <div className="p-2">
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => toggleGenreExpanded(genre.id)}
-                          className="text-gray-500 hover:text-gray-700"
-                        >
-                          {expandedGenres.has(genre.id) ? (
-                            <ChevronDown className="w-4 h-4" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4" />
-                          )}
-                        </button>
-                        <FolderOpen className="w-4 h-4 text-blue-600" />
-                        <span className="font-medium text-gray-900 text-sm flex-1 truncate">
-                          {genre.name}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {genre.books.length}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteGenre(genre.id);
-                          }}
-                          className="text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-
-                      {/* Expanded Genre Content */}
-                      {expandedGenres.has(genre.id) && (
-                        <div className="mt-2 ml-6 space-y-2">
-                          {/* Add Book Input */}
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              value={newBookTitle[genre.id] || ""}
-                              onChange={(e) =>
-                                setNewBookTitle({
-                                  ...newBookTitle,
-                                  [genre.id]: e.target.value,
-                                })
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter")
-                                  handleCreateBook(genre.id);
-                              }}
-                              placeholder="Add book..."
-                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <Button
-                              size="sm"
-                              onClick={() => handleCreateBook(genre.id)}
-                              disabled={!newBookTitle[genre.id]?.trim()}
-                            >
-                              <Plus className="w-3 h-3" />
-                            </Button>
-                          </div>
-
-                          {/* Books List */}
-                          {genre.books.map((book) => (
-                            <div
-                              key={book.id}
-                              className="bg-gray-50 rounded-md p-2 border border-gray-200"
-                            >
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => toggleBookExpanded(book.id)}
-                                  className="text-gray-500 hover:text-gray-700"
-                                >
-                                  {expandedBooks.has(book.id) ? (
-                                    <ChevronDown className="w-3 h-3" />
-                                  ) : (
-                                    <ChevronRight className="w-3 h-3" />
-                                  )}
-                                </button>
-                                <BookOpen className="w-3 h-3 text-green-600" />
-                                <span className="text-xs font-medium text-gray-900 flex-1 truncate">
-                                  {book.title}
-                                </span>
-                                <span className="text-xs text-gray-500">
-                                  {book.chapters.length}
-                                </span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteBook(book.id);
-                                  }}
-                                  className="text-gray-400 hover:text-red-600"
-                                >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </div>
-
-                              {/* Expanded Book Content */}
-                              {expandedBooks.has(book.id) && (
-                                <div className="mt-2 ml-5 space-y-1">
-                                  {/* Add Chapter Input */}
-                                  <div className="flex gap-2">
-                                    <input
-                                      type="text"
-                                      value={newChapterTitle[book.id] || ""}
-                                      onChange={(e) =>
-                                        setNewChapterTitle({
-                                          ...newChapterTitle,
-                                          [book.id]: e.target.value,
-                                        })
-                                      }
-                                      onKeyDown={(e) => {
-                                        if (e.key === "Enter")
-                                          handleCreateChapter(book.id);
-                                      }}
-                                      placeholder="Add chapter..."
-                                      className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    <Button
-                                      size="sm"
-                                      onClick={() =>
-                                        handleCreateChapter(book.id)
-                                      }
-                                      disabled={
-                                        !newChapterTitle[book.id]?.trim()
-                                      }
-                                    >
-                                      <Plus className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-
-                                  {/* Chapters List */}
-                                  {book.chapters.map((chapter) => (
-                                    <div
-                                      key={chapter.id}
-                                      className={`flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-blue-50 ${
-                                        selectedChapter?.id === chapter.id
-                                          ? "bg-blue-100 text-blue-900 font-medium"
-                                          : "text-gray-700"
-                                      }`}
-                                    >
-                                      <button
-                                        onClick={() =>
-                                          handleChapterClick(chapter)
-                                        }
-                                        className="flex-1 text-left truncate"
-                                      >
-                                        {chapter.title}
-                                      </button>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteChapter(chapter.id);
-                                        }}
-                                        className="text-gray-400 hover:text-red-600 shrink-0"
-                                      >
-                                        <Trash2 className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+  // Library View (Visual Bookshelf)
+  if (viewMode === "library") {
+    return (
+      <div className="p-6 h-full overflow-y-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-serif font-bold text-foreground tracking-tight mb-2">
+            Library
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Organize your reading notes by genre and book
+          </p>
         </div>
-      </div>
 
-      {/* Desktop sidebar */}
-      <div className="hidden md:block w-80 flex-shrink-0 border-r border-gray-200 overflow-y-auto bg-gray-50">
-        <div className="p-4">
-          {/* Create New Genre */}
-          <div className="mb-4 bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+        {/* Create Genre */}
+        <Card className="mb-6 border-border/60">
+          <CardContent className="pt-6">
             <div className="flex gap-2">
               <input
                 type="text"
                 value={newGenreName}
                 onChange={(e) => setNewGenreName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleCreateGenre();
-                }}
-                placeholder="Add genre..."
-                className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onKeyDown={(e) => e.key === "Enter" && handleCreateGenre()}
+                placeholder="Add a new genre..."
+                className="flex-1 px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background"
               />
               <Button
-                size="sm"
                 onClick={handleCreateGenre}
                 disabled={!newGenreName.trim()}
               >
-                <Plus className="w-3 h-3" />
+                <Plus className="w-4 h-4 mr-1" />
+                Add Genre
               </Button>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          {/* Genres List (same as mobile content) */}
-          {genres.length === 0 ? (
-            <div className="text-center py-8 bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="text-4xl mb-2">📚</div>
-              <p className="text-sm text-gray-600">No genres yet</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {genres.map((genre) => (
-                <div
-                  key={genre.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200"
-                >
-                  {/* Genre Header */}
-                  <div className="p-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => toggleGenreExpanded(genre.id)}
-                        className="text-gray-500 hover:text-gray-700"
+        {/* Genres & Books Grid */}
+        {genres.length === 0 ? (
+          <Card className="border-border/60">
+            <CardContent className="text-center py-12">
+              <div className="text-6xl mb-4">📚</div>
+              <h3 className="text-lg font-serif font-semibold text-foreground mb-2">
+                No Genres Yet
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Start by adding your first genre
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-8">
+            {genres.map((genre) => (
+              <div key={genre.id}>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-xl font-serif font-medium text-foreground">
+                      {genre.name}
+                    </h3>
+                    <Badge variant="outline" className="font-mono">
+                      {genre.books.length}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => handleDeleteGenre(genre.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Books Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {genre.books.map((book, index) => (
+                    <div
+                      key={book.id}
+                      className="group cursor-pointer"
+                      onClick={() => handleOpenBook(book)}
+                    >
+                      {/* Book Cover */}
+                      <div
+                        className={`aspect-[2/3] rounded-r-md rounded-l-sm bg-gradient-to-br ${getBookColor(
+                          index
+                        )} border-l-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex items-center justify-center p-4 text-center relative`}
                       >
-                        {expandedGenres.has(genre.id) ? (
-                          <ChevronDown className="w-4 h-4" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4" />
-                        )}
-                      </button>
-                      <FolderOpen className="w-4 h-4 text-blue-600" />
-                      <span className="font-medium text-gray-900 text-sm flex-1 truncate">
-                        {genre.name}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {genre.books.length}
-                      </span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteGenre(genre.id);
-                        }}
-                        className="text-gray-400 hover:text-red-600"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-
-                    {/* Expanded Genre Content */}
-                    {expandedGenres.has(genre.id) && (
-                      <div className="mt-2 ml-6 space-y-2">
-                        {/* Add Book Input */}
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={newBookTitle[genre.id] || ""}
-                            onChange={(e) =>
-                              setNewBookTitle({
-                                ...newBookTitle,
-                                [genre.id]: e.target.value,
-                              })
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleCreateBook(genre.id);
-                            }}
-                            placeholder="Add book..."
-                            className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleCreateBook(genre.id)}
-                            disabled={!newBookTitle[genre.id]?.trim()}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-
-                        {/* Books List */}
-                        {genre.books.map((book) => (
-                          <div
-                            key={book.id}
-                            className="bg-gray-50 rounded-md p-2 border border-gray-200"
-                          >
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => toggleBookExpanded(book.id)}
-                                className="text-gray-500 hover:text-gray-700"
-                              >
-                                {expandedBooks.has(book.id) ? (
-                                  <ChevronDown className="w-3 h-3" />
-                                ) : (
-                                  <ChevronRight className="w-3 h-3" />
-                                )}
-                              </button>
-                              <BookOpen className="w-3 h-3 text-green-600" />
-                              <span className="text-xs font-medium text-gray-900 flex-1 truncate">
-                                {book.title}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {book.chapters.length}
-                              </span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteBook(book.id);
-                                }}
-                                className="text-gray-400 hover:text-red-600"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-
-                            {/* Expanded Book Content */}
-                            {expandedBooks.has(book.id) && (
-                              <div className="mt-2 ml-5 space-y-1">
-                                {/* Add Chapter Input */}
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    value={newChapterTitle[book.id] || ""}
-                                    onChange={(e) =>
-                                      setNewChapterTitle({
-                                        ...newChapterTitle,
-                                        [book.id]: e.target.value,
-                                      })
-                                    }
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter")
-                                        handleCreateChapter(book.id);
-                                    }}
-                                    placeholder="Add chapter..."
-                                    className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  />
-                                  <Button
-                                    size="sm"
-                                    onClick={() => handleCreateChapter(book.id)}
-                                    disabled={!newChapterTitle[book.id]?.trim()}
-                                  >
-                                    <Plus className="w-3 h-3" />
-                                  </Button>
-                                </div>
-
-                                {/* Chapters List */}
-                                {book.chapters.map((chapter) => (
-                                  <div
-                                    key={chapter.id}
-                                    className={`flex items-center gap-1 px-2 py-1 text-xs rounded hover:bg-blue-50 ${
-                                      selectedChapter?.id === chapter.id
-                                        ? "bg-blue-100 text-blue-900 font-medium"
-                                        : "text-gray-700"
-                                    }`}
-                                  >
-                                    <button
-                                      onClick={() =>
-                                        handleChapterClick(chapter)
-                                      }
-                                      className="flex-1 text-left truncate"
-                                    >
-                                      {chapter.title}
-                                    </button>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteChapter(chapter.id);
-                                      }}
-                                      className="text-gray-400 hover:text-red-600 shrink-0"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                        <span className="font-serif font-bold text-foreground/80 leading-tight text-sm">
+                          {book.title}
+                        </span>
                       </div>
-                    )}
+                      {/* Metadata */}
+                      <div className="mt-2">
+                        <p className="text-sm font-medium truncate text-foreground">
+                          {book.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {book.chapters.length} chapter
+                          {book.chapters.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add Book Card */}
+                  <div className="aspect-[2/3] border-2 border-dashed border-border rounded-md flex flex-col items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-colors p-4">
+                    <input
+                      type="text"
+                      value={newBookTitle[genre.id] || ""}
+                      onChange={(e) =>
+                        setNewBookTitle({
+                          ...newBookTitle,
+                          [genre.id]: e.target.value,
+                        })
+                      }
+                      onKeyDown={(e) =>
+                        e.key === "Enter" && handleCreateBook(genre.id)
+                      }
+                      placeholder="Book title..."
+                      className="w-full px-2 py-1 text-xs border border-input rounded-md mb-2 text-center focus:outline-none focus:ring-2 focus:ring-ring bg-background text-foreground"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCreateBook(genre.id);
+                      }}
+                      disabled={!newBookTitle[genre.id]?.trim()}
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add
+                    </Button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Chapter Editor */}
-      <div className="flex-1 overflow-y-auto min-w-0 bg-white">
-        {selectedChapter ? (
-          <div className="h-full flex flex-col">
-            {/* Chapter header */}
-            <div className="border-b border-gray-200 bg-white px-4 sm:px-6 py-3 sm:py-4">
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={() => setShowMobileSidebar(true)}
-                  className="md:hidden text-gray-600 hover:text-gray-900"
-                >
-                  <Menu className="w-5 h-5" />
-                </button>
-                <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate flex-1">
-                  {selectedChapter.title}
-                </h3>
               </div>
-            </div>
-            <div className="flex-1 p-4 sm:p-6">
-              <EditorWithPersistence
-                key={selectedChapter.id}
-                entityType="chapter"
-                entityId={selectedChapter.id}
-                initialContent={selectedChapter.content}
-                highlights={(selectedChapter as any).highlights || []}
-                onContentChange={handleChapterSave}
-                placeholder="Write your chapter notes here..."
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full p-4">
-            <div className="text-center">
-              <button
-                onClick={() => setShowMobileSidebar(true)}
-                className="md:hidden mb-4 mx-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Menu className="w-5 h-5" />
-                <span>Browse Books</span>
-              </button>
-              <div className="text-6xl mb-4">📖</div>
-              <p className="text-gray-600 text-sm sm:text-base">
-                Select a chapter to start editing
-              </p>
-            </div>
+            ))}
           </div>
         )}
       </div>
-    </div>
-  );
+    );
+  }
+
+  // Book View (Chapters List)
+  if (viewMode === "book" && selectedBook) {
+    return (
+      <div className="p-6 h-full overflow-y-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setViewMode("library");
+              setSelectedBook(null);
+            }}
+            className="mb-4"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Library
+          </Button>
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-2xl font-serif font-bold text-foreground tracking-tight mb-2">
+                {selectedBook.title}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {selectedBook.chapters.length} chapter
+                {selectedBook.chapters.length !== 1 ? "s" : ""}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => handleDeleteBook(selectedBook.id)}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Add Chapter */}
+        <Card className="mb-6 border-border/60">
+          <CardContent className="pt-6">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newChapterTitle}
+                onChange={(e) => setNewChapterTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreateChapter()}
+                placeholder="Add a new chapter..."
+                className="flex-1 px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-background"
+              />
+              <Button
+                onClick={handleCreateChapter}
+                disabled={!newChapterTitle.trim()}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Chapter
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Chapters List */}
+        {selectedBook.chapters.length === 0 ? (
+          <Card className="border-border/60">
+            <CardContent className="text-center py-12">
+              <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">No chapters yet</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-3">
+            {selectedBook.chapters.map((chapter: any, index: number) => (
+              <Card
+                key={chapter.id}
+                className="hover-elevate cursor-pointer border-border/60"
+                onClick={() => handleOpenChapter(chapter)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="text-sm font-mono text-muted-foreground">
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {chapter.title}
+                      </span>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteChapter(chapter.id);
+                      }}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Chapter View (Editor)
+  if (viewMode === "chapter" && selectedChapter) {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="border-b border-border bg-card px-6 py-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setViewMode("book");
+              setSelectedChapter(null);
+            }}
+            className="mb-3"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to {selectedBook?.title}
+          </Button>
+          <h3 className="text-lg font-serif font-medium text-foreground">
+            {selectedChapter.title}
+          </h3>
+        </div>
+        {/* Editor */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          <EditorWithPersistence
+            key={selectedChapter.id}
+            entityType="chapter"
+            entityId={selectedChapter.id}
+            initialContent={selectedChapter.content}
+            highlights={selectedChapter.highlights || []}
+            onContentChange={handleChapterSave}
+            placeholder="Write your chapter notes here..."
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

@@ -1,6 +1,22 @@
 "use client";
 
 import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  BookOpen,
+  Calendar,
+  Hash,
+  Target,
+  Lightbulb,
+  PenTool,
+  ArrowRight,
+} from "lucide-react";
 
 interface YearDashboardProps {
   year: number;
@@ -20,6 +36,24 @@ export interface Section {
   description: string;
   icon: string;
 }
+
+const iconMap = {
+  "daily-logs": Calendar,
+  "quarterly-reflections": PenTool,
+  "yearly-goals": Target,
+  "book-notes": BookOpen,
+  "lessons-learned": Lightbulb,
+  "creative-dump": Hash,
+};
+
+const colorMap = {
+  "daily-logs": "from-blue-50 to-blue-100/50",
+  "quarterly-reflections": "from-purple-50 to-purple-100/50",
+  "yearly-goals": "from-emerald-50 to-emerald-100/50",
+  "book-notes": "from-amber-50 to-amber-100/50",
+  "lessons-learned": "from-rose-50 to-rose-100/50",
+  "creative-dump": "from-cyan-50 to-cyan-100/50",
+};
 
 export const sections: Section[] = [
   {
@@ -61,50 +95,59 @@ export const sections: Section[] = [
 ];
 
 export default function YearDashboard({ year }: YearDashboardProps) {
-  // UPDATED: Removed "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6" as YearShell handles it now
   return (
     <div className="pb-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-serif font-bold text-foreground tracking-tight">
           {year} Journal
         </h1>
-        <p className="text-sm sm:text-base text-gray-600 mt-1">
+        <p className="text-base text-muted-foreground mt-2">
           Your personal knowledge management space for {year}
         </p>
       </div>
 
       <div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
         data-testid="section-grid"
       >
-        {sections.map((section) => (
-          <Link
-            key={section.id}
-            href={`/year/${year}/${section.id}`}
-            data-testid={`section-card-${section.id}`}
-            className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow cursor-pointer border border-gray-200 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 block"
-          >
-            <div className="p-4 sm:p-6">
-              <div className="flex items-center mb-3 sm:mb-4">
-                <span
-                  className="text-2xl sm:text-3xl mr-2 sm:mr-3"
-                  aria-hidden="true"
-                >
-                  {section.icon}
-                </span>
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  {section.title}
-                </h3>
-              </div>
-              <p className="text-sm sm:text-base text-gray-600 mb-3 sm:mb-4">
-                {section.description}
-              </p>
-              <div className="text-sm text-blue-600 font-medium">
-                Open Section →
-              </div>
-            </div>
-          </Link>
-        ))}
+        {sections.map((section) => {
+          const Icon = iconMap[section.id];
+          const gradient = colorMap[section.id];
+
+          return (
+            <Link
+              key={section.id}
+              href={`/year/${year}/${section.id}`}
+              data-testid={`section-card-${section.id}`}
+              className="block group"
+            >
+              <Card className="h-full hover-elevate border-border/60 overflow-hidden">
+                <div className={`h-2 bg-gradient-to-r ${gradient}`} />
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-secondary/50">
+                        <Icon className="w-5 h-5 text-foreground" />
+                      </div>
+                      <CardTitle className="text-lg font-serif">
+                        {section.title}
+                      </CardTitle>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-5">
+                  <CardDescription className="text-sm leading-relaxed mb-3">
+                    {section.description}
+                  </CardDescription>
+                  <div className="flex items-center text-sm font-medium text-primary group-hover:gap-2 transition-all">
+                    <span>Open</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
