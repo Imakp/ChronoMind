@@ -1261,7 +1261,7 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
           year: highlight.dailyLog.year.year,
           section: "daily-logs" as const,
           itemId: highlight.dailyLog.id,
-          itemTitle: highlight.dailyLog.date.toLocaleDateString(),
+          itemTitle: `Daily Log - ${highlight.dailyLog.date.toLocaleDateString()}`,
         };
       } else if (highlight.quarterlyReflection) {
         source = {
@@ -1437,7 +1437,7 @@ export async function getTaggedContentByTagAndYear(
           year: highlight.dailyLog.year.year,
           section: "daily-logs" as const,
           itemId: highlight.dailyLog.id,
-          itemTitle: highlight.dailyLog.date.toLocaleDateString(),
+          itemTitle: `Daily Log - ${highlight.dailyLog.date.toLocaleDateString()}`,
         };
       } else if (highlight.quarterlyReflection) {
         source = {

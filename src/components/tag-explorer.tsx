@@ -265,10 +265,14 @@ export function TagExplorer({ userId, year }: TagExplorerProps) {
                               <span className="font-medium text-foreground/80">
                                 {item.source?.itemTitle || "Unknown Source"}
                               </span>
-                              <span className="opacity-50">•</span>
-                              <span>
-                                {new Date(item.createdAt).toLocaleDateString()}
-                              </span>
+                              {item.source?.section !== "daily-logs" && (
+                                <>
+                                  <span className="opacity-50">•</span>
+                                  <span>
+                                    {new Date(item.createdAt).toLocaleDateString()}
+                                  </span>
+                                </>
+                              )}
                             </div>
                             {item.source && (
                               <Link href={getSourceUrl(item.source)}>
