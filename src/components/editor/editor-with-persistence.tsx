@@ -3,23 +3,18 @@
 import { useState, useCallback, useEffect } from "react";
 import { RichTextEditor } from "./rich-text-editor";
 import { useSession } from "next-auth/react";
+import { cn } from "@/lib/utils";
 
 interface EditorWithPersistenceProps {
-  entityType:
-    | "dailyLog"
-    | "quarterlyReflection"
-    | "goal"
-    | "task"
-    | "subtask"
-    | "chapter"
-    | "lesson"
-    | "creativeNote";
+  entityType: "creativeNote" | "lesson" | "dailyLog" | "quarterlyReflection" | "chapter";
   entityId: string;
-  initialContent: any;
-  onContentChange: (content: any) => void;
+  initialContent?: any;
+  onContentChange?: (content: any) => void;
   placeholder?: string;
   editable?: boolean;
-  highlights?: any[]; // ADD: Accept highlights from parent
+  highlights?: any[];
+  variant?: "default" | "minimal" | "clean";
+  className?: string;
 }
 
 export function EditorWithPersistence({
@@ -29,7 +24,9 @@ export function EditorWithPersistence({
   onContentChange,
   placeholder,
   editable = true,
-  highlights = [], // ADD: Default to empty array
+  highlights = [],
+  variant,
+  className,
 }: EditorWithPersistenceProps) {
   const { data: session } = useSession();
   const [content, setContent] = useState(initialContent);
@@ -42,13 +39,15 @@ export function EditorWithPersistence({
   const handleContentChange = useCallback(
     (newContent: any) => {
       setContent(newContent);
-      onContentChange(newContent);
+      if (onContentChange) {
+        onContentChange(newContent);
+      }
     },
     [onContentChange]
   );
 
   return (
-    <div className="relative">
+    <div className={cn("relative", className)}>
       <RichTextEditor
         content={content}
         onChange={handleContentChange}
@@ -58,6 +57,7 @@ export function EditorWithPersistence({
         entityId={entityId}
         userId={session?.user?.id || ""}
         highlights={highlights} // PASS: Forward highlights to RichTextEditor
+        variant={variant}
       />
     </div>
   );

@@ -10,9 +10,10 @@ import {
   deleteCreativeNote,
   getCreativeNotes,
 } from "@/lib/actions";
+// ... existing imports ...
 import { Button } from "./ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Plus, Trash2, Hash, Sparkles, Calendar } from "lucide-react";
+// REMOVED: Dialog imports
+import { Plus, Trash2, Hash, Sparkles, Calendar, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -120,136 +121,162 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
     return text.trim() || "Empty note...";
   };
 
+  const isEditing = !!editingNote;
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="font-serif text-3xl font-medium text-foreground tracking-tight">
-            Creative Dump
-          </h2>
-          <p className="text-muted-foreground mt-1 text-lg">
-            Unstructured space for brainwaves, drafts, and sparks.
-          </p>
+    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20 relative">
+      <div className={cn("transition-all duration-500", isEditing ? "opacity-20 blur-sm pointer-events-none" : "opacity-100")}>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-serif text-3xl font-medium text-foreground tracking-tight">
+              Creative Dump
+            </h2>
+            <p className="text-muted-foreground mt-1 text-lg">
+              Unstructured space for brainwaves, drafts, and sparks.
+            </p>
+          </div>
+          <Button
+            onClick={handleCreateNote}
+            size="lg"
+            className="shadow-sm bg-gradient-to-r from-pink-500 to-rose-500 text-white border-none hover:opacity-90"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            New Spark
+          </Button>
         </div>
-        <Button
-          onClick={handleCreateNote}
-          size="lg"
-          className="shadow-sm bg-gradient-to-r from-pink-500 to-rose-500 text-white border-none hover:opacity-90"
+
+        <motion.div 
+           layout
+           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8"
         >
-          <Sparkles className="w-4 h-4 mr-2" />
-          New Spark
-        </Button>
-      </div>
+          <AnimatePresence>
+            {notes.map((note, i) => {
+              const colorClass = getNoteColor(note.id);
+              const text = getPlainText(note.content);
+              const isShort = text.length < 50;
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        <AnimatePresence>
-          {notes.map((note, i) => {
-            const colorClass = getNoteColor(note.id);
-            const text = getPlainText(note.content);
-            const isShort = text.length < 50;
-
-            return (
-              <motion.div
-                key={note.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ delay: i * 0.05 }}
-                onClick={() => setEditingNote(note)}
-                className="h-full"
-              >
-                <div
-                  className={cn(
-                    "relative group cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:rotate-1 min-h-[180px] flex flex-col justify-between",
-                    colorClass
-                  )}
+              return (
+                <motion.div
+                  key={note.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => setEditingNote(note)}
+                  className="h-full"
                 >
-                  {/* Content Preview */}
                   <div
                     className={cn(
-                      "font-serif text-foreground/90 leading-relaxed overflow-hidden",
-                      isShort
-                        ? "text-xl font-medium text-center flex items-center justify-center h-full"
-                        : "text-sm line-clamp-6"
+                      "relative group cursor-pointer p-6 rounded-xl border-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:rotate-1 min-h-[180px] flex flex-col justify-between",
+                      colorClass
                     )}
                   >
-                    {text}
-                  </div>
-
-                  {/* Metadata Footer */}
-                  <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between opacity-60 group-hover:opacity-100 transition-opacity">
-                    <span className="text-xs font-mono font-medium flex items-center gap-1">
-                      {new Date(note.createdAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteNote(note.id);
-                      }}
-                      className="hover:text-destructive transition-colors p-1"
+                    {/* Content Preview */}
+                    <div
+                      className={cn(
+                        "font-serif text-foreground/90 leading-relaxed overflow-hidden",
+                        isShort
+                          ? "text-xl font-medium text-center flex items-center justify-center h-full"
+                          : "text-sm line-clamp-6"
+                      )}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                      {text}
+                    </div>
+
+                    {/* Metadata Footer */}
+                    <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between opacity-60 group-hover:opacity-100 transition-opacity">
+                      <span className="text-xs font-mono font-medium flex items-center gap-1">
+                        {new Date(note.createdAt).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteNote(note.id);
+                        }}
+                        className="hover:text-destructive transition-colors p-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-        {notes.length === 0 && (
-          <div className="col-span-full py-24 text-center border-2 border-dashed border-border/50 rounded-xl bg-secondary/5">
-            <Hash className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">Your canvas is blank.</p>
-          </div>
-        )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+          {notes.length === 0 && (
+            <div className="col-span-full py-24 text-center border-2 border-dashed border-border/50 rounded-xl bg-secondary/5">
+              <Hash className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground">Your canvas is blank.</p>
+            </div>
+          )}
+        </motion.div>
       </div>
 
-      {/* Editor Dialog */}
-      <Dialog
-        open={!!editingNote}
-        onOpenChange={(open) => !open && setEditingNote(null)}
-      >
-        <DialogContent
-          className={cn(
-            "max-w-2xl h-[80vh] flex flex-col p-0 gap-0 shadow-2xl border-none",
-            editingNote
-              ? getNoteColor(editingNote.id).split(" ")[0]
-              : "bg-background"
-          )}
-        >
-          {editingNote && (
-            <>
-              <div className="px-6 py-4 border-b border-black/5 flex justify-between items-center shrink-0">
-                <div className="flex items-center gap-2 text-sm font-medium opacity-70">
-                  <Calendar className="w-4 h-4" />
-                  {new Date(editingNote.createdAt).toLocaleString()}
+      {/* ZEN EDITOR OVERLAY */}
+      <AnimatePresence>
+        {isEditing && editingNote && (
+          <motion.div
+            key="creative-zen-editor"
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-50 bg-background overflow-y-auto p-4 sm:p-12 md:p-20"
+          >
+            <div className="max-w-4xl mx-auto h-full flex flex-col">
+              {/* Header/Close Button */}
+              <div className="flex justify-between items-center mb-8 shrink-0">
+                <div className="flex items-center gap-4">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => setEditingNote(null)}
+                        className="rounded-full"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </Button>
+                    <h2 className="font-serif text-3xl font-bold tracking-tight text-gray-900">
+                      Creative Spark
+                    </h2>
                 </div>
-                {savingNotes.has(editingNote.id) && (
-                  <span className="text-xs animate-pulse font-mono">
-                    Saving...
-                  </span>
-                )}
+                <div className="flex items-center gap-4">
+                     {savingNotes.has(editingNote.id) && (
+                        <span className="text-xs animate-pulse font-mono text-muted-foreground">
+                            Saving...
+                        </span>
+                     )}
+                    <Button
+                        onClick={() => setEditingNote(null)}
+                        className="rounded-full shadow-lg"
+                    >
+                        Done Capturing
+                    </Button>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 sm:p-10">
-                <EditorWithPersistence
-                  key={editingNote.id}
-                  entityType="creativeNote"
-                  entityId={editingNote.id}
-                  initialContent={editingNote.content}
-                  onContentChange={(content) =>
-                    handleContentChange(editingNote.id, content)
-                  }
-                  placeholder="Start typing..."
-                  highlights={(editingNote as any).highlights || []}
-                />
+
+              {/* Editor Area */}
+              <div className="flex-1 overflow-y-auto -mx-4 sm:-mx-8">
+                <div className="max-w-3xl mx-auto h-full">
+                  <EditorWithPersistence
+                    key={editingNote.id}
+                    entityType="creativeNote"
+                    entityId={editingNote.id}
+                    initialContent={editingNote.content}
+                    onContentChange={(c) => handleContentChange(editingNote.id, c)}
+                    placeholder="Capture the idea..."
+                    variant="minimal" // Zen Mode variant
+                    className="prose-lg"
+                    highlights={(editingNote as any).highlights || []}
+                  />
+                </div>
               </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

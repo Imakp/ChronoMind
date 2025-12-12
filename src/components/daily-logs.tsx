@@ -49,6 +49,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
   const [selectedLog, setSelectedLog] = useState<DailyLog | null>(null);
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
 
@@ -157,7 +158,12 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20">
       {/* 1. Header & Navigation */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div 
+         className={cn(
+            "flex flex-col md:flex-row md:items-end justify-between gap-6 transition-all duration-700",
+            isFocused ? "opacity-10 blur-[2px] pointer-events-none grayscale" : "opacity-100"
+         )}
+      >
         <div>
           <h2 className="font-serif text-3xl font-medium text-foreground flex items-center gap-3">
             Daily Log
@@ -331,7 +337,15 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                 It's never too late to backfill a quick summary.
               </AlertDescription>
             </Alert>
-            <div className="opacity-80 transition-opacity duration-300 hover:opacity-100 focus-within:opacity-100">
+            <div 
+               className={cn(
+                  "opacity-90 transition-all duration-500 rounded-xl p-6 md:p-10",
+                  isFocused 
+                    ? "scale-[1.01] shadow-xl bg-background z-20 ring-1 ring-black/5" 
+                    : "scale-100 hover:bg-secondary/10"
+               )}
+               onFocus={() => setIsFocused(true)}
+            >
               <EditorWithPersistence
                 key={selectedLog.id}
                 entityType="dailyLog"
@@ -342,34 +356,95 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                 highlights={(selectedLog as any).highlights || []}
                 onContentChange={handleContentChange}
                 placeholder="Backfill your memory... What happened on this day?"
+                variant="minimal"
+                className="prose-lg"
               />
+              {isFocused && (
+                 <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
+                    <Button 
+                      className="shadow-lg rounded-full px-6"
+                      size="lg"
+                      onClick={() => setIsFocused(false)}
+                    >
+                      Done Writing
+                    </Button>
+                 </div>
+              )}
             </div>
           </div>
         ) : selectedLog ? (
-          <div className="relative group">
-            {/* Saving Indicator */}
-            <div className="absolute -top-12 right-0 flex items-center gap-2 text-xs text-muted-foreground transition-opacity duration-500">
-              {isSaving ? (
-                <span className="flex items-center gap-1.5">
-                  <Loader2 className="w-3 h-3 animate-spin" /> Saving...
-                </span>
-              ) : (
-                <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  Saved
-                </span>
-              )}
+          <div className="relative group perspective-1000">
+             {/* Header Dimmer Overlay */}
+             {isFocused && (
+                <div 
+                  className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-10 animate-in fade-in duration-700"
+                  onClick={() => setIsFocused(false)}
+                />
+             )}
+
+            <div 
+               className={cn(
+                  "transition-all duration-700 ease-out origin-center relative",
+                  isFocused 
+                    ? "scale-[1.02] bg-background z-20 min-h-[70vh] py-12" 
+                    : "scale-100",
+                  !isFocused && "hover:bg-secondary/5 rounded-xl border border-transparent hover:border-border/40 p-4 -mx-4"
+               )}
+               onFocus={() => !isFocused && setIsFocused(true)}
+            >
+                {/* Saving Indicator */}
+                <div className={cn(
+                   "flex items-center gap-2 text-xs text-muted-foreground transition-all duration-500 absolute top-0 right-0 p-4",
+                   isFocused ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                )}>
+                  {isSaving ? (
+                    <span className="flex items-center gap-1.5">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+                    </span>
+                  ) : (
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      Saved
+                    </span>
+                  )}
+                </div>
+
+                <div className="max-w-3xl mx-auto">
+                   <div className={cn(
+                      "mb-8 text-center transition-all duration-700 delay-100",
+                       isFocused ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 hidden"
+                   )}>
+                      <p className="font-serif text-2xl text-foreground/80">
+                         {format(currentDate, "EEEE, MMMM do")}
+                      </p>
+                   </div>
+
+                   <EditorWithPersistence
+                     key={selectedLog.id}
+                     entityType="dailyLog"
+                     entityId={selectedLog.id}
+                     initialContent={
+                       selectedLog.content || { type: "doc", content: [] }
+                     }
+                     highlights={(selectedLog as any).highlights || []}
+                     onContentChange={handleContentChange}
+                     placeholder="What's on your mind today? Highlight text to tag it..."
+                     variant="minimal"
+                     className="prose-lg"
+                   />
+                </div>
             </div>
-            <EditorWithPersistence
-              key={selectedLog.id}
-              entityType="dailyLog"
-              entityId={selectedLog.id}
-              initialContent={
-                selectedLog.content || { type: "doc", content: [] }
-              }
-              highlights={(selectedLog as any).highlights || []}
-              onContentChange={handleContentChange}
-              placeholder="What's on your mind today? Highlight text to tag it..."
-            />
+
+            {isFocused && (
+                 <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
+                    <Button 
+                      className="shadow-lg rounded-full px-6 h-12"
+                      onClick={() => setIsFocused(false)}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Done Writing
+                    </Button>
+                 </div>
+              )}
           </div>
         ) : null}
       </div>

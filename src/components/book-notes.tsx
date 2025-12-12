@@ -1,5 +1,7 @@
 "use client";
 
+import { motion, AnimatePresence } from "framer-motion";
+
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -62,6 +64,7 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   const [view, setView] = useState<"genres" | "books" | "chapters" | "editor">(
     "genres"
   );
+  const [isZenMode, setIsZenMode] = useState(false);
   const [activeGenre, setActiveGenre] = useState<GenreWithRelations | null>(
     null
   );
@@ -421,7 +424,8 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   if (view === "chapters" && activeBook) {
     const coverStyle = getBookColor(activeBook.id);
     return (
-      <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="relative">
+      <div className={cn("max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 transition-all duration-700", isZenMode ? "opacity-20 blur-sm pointer-events-none" : "opacity-100")}>
         <Breadcrumbs />
         {/* Book Header Card */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col sm:flex-row items-start gap-6 shadow-sm">
@@ -486,14 +490,14 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
             <Card
               key={chapter.id}
               className="hover:border-primary/50 transition-all cursor-pointer group"
-              onClick={() => {
+                onClick={() => {
                 setActiveChapter({
                   id: chapter.id,
                   title: chapter.title,
                   content: chapter.content || { type: "doc", content: [] },
                   highlights: chapter.highlights || [],
                 });
-                setView("editor");
+                setIsZenMode(true);
               }}
             >
               <CardContent className="p-4 flex items-center justify-between">
@@ -523,6 +527,63 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
             </Card>
           ))}
         </div>
+      </div>
+      
+      {/* ZEN MODE OVERLAY */}
+      <AnimatePresence>
+        {isZenMode && activeChapter && (
+           <motion.div
+             key="book-zen-editor"
+             initial={{ opacity: 0, y: 50, scale: 0.95 }}
+             animate={{ opacity: 1, y: 0, scale: 1 }}
+             exit={{ opacity: 0, y: 50, scale: 0.95 }}
+             transition={{ duration: 0.3 }}
+             className="fixed inset-0 z-50 bg-background overflow-y-auto p-4 sm:p-12 md:p-20"
+           >
+             <div className="max-w-4xl mx-auto h-full flex flex-col">
+                {/* Header/Close Button */}
+                <div className="flex justify-between items-center mb-8 shrink-0">
+                    <div className="flex items-center">
+                         <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setIsZenMode(false)}
+                            className="mr-4 rounded-full"
+                        >
+                            <ArrowLeft className="w-5 h-5 mr-2" /> Back to Chapters
+                        </Button>
+                        <h2 className="font-serif text-3xl font-bold tracking-tight text-gray-900">
+                         {activeChapter.title}
+                        </h2>
+                    </div>
+                    <Button
+                        onClick={() => setIsZenMode(false)}
+                        className="rounded-full shadow-lg"
+                    >
+                        Done Editing
+                    </Button>
+                </div>
+
+                {/* Editor Area */}
+                <div className="flex-1 overflow-y-auto -mx-4 sm:-mx-8">
+                  <div className="max-w-3xl mx-auto">
+                    <EditorWithPersistence
+                        key={activeChapter.id}
+                        entityType="chapter"
+                        entityId={activeChapter.id}
+                        initialContent={activeChapter.content}
+                        highlights={activeChapter.highlights || []}
+                        onContentChange={handleChapterSave}
+                        placeholder="Start your notes or summary here..."
+                        variant="minimal"
+                        className="prose-lg"
+                    />
+                  </div>
+                </div>
+             </div>
+           </motion.div>
+        )}
+      </AnimatePresence>
       </div>
     );
   }
