@@ -284,6 +284,7 @@ export function RichTextEditor({
           selectedText={menuState.selection.text}
           onTagsAssign={applyTags}
           onClose={closeMenu}
+          userId={userId}
         />
       )}
 
