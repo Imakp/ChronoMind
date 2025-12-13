@@ -72,7 +72,7 @@ export default function YearSelector({
           ChronoMind
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground max-w-lg mx-auto leading-relaxed">
-          Construct your life's database. One year at a time.
+          Construct your life&apos;s database. One year at a time.
         </p>
       </div>
 

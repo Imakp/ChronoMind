@@ -2,7 +2,22 @@
 
 import { db } from "./db";
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import type { 
+  Prisma,
+  Highlight,
+  Tag,
+  DailyLog,
+  QuarterlyReflection,
+  Goal,
+  Task,
+  SubTask,
+  Chapter,
+  Book,
+  Genre,
+  Lesson,
+  CreativeNote,
+  Year
+} from "@prisma/client";
 import {
   createYearSchema,
   updateDailyLogSchema,
@@ -13,8 +28,6 @@ import {
   updateTaskSchema,
   createSubTaskSchema,
   updateSubTaskSchema,
-  createGenreSchema,
-  createBookSchema,
   createChapterSchema,
   updateChapterSchema,
   createLessonSchema,
@@ -27,6 +40,22 @@ import {
   sanitizeTiptapContent,
 } from "./validations";
 import { handleActionError } from "./error-handler";
+// ... (rest of imports)
+
+// Type definition for Highlight with all possible relations
+type HighlightWithRelations = Highlight & {
+  tags: Tag[];
+  dailyLog?: (DailyLog & { year: Year }) | null;
+  quarterlyReflection?: (QuarterlyReflection & { year: Year }) | null;
+  goal?: (Goal & { year: Year }) | null;
+  task?: (Task & { goal: Goal & { year: Year } }) | null;
+  subtask?: (SubTask & { task: Task & { goal: Goal & { year: Year } } }) | null;
+  chapter?: (Chapter & { book: Book & { genre: Genre & { year: Year } } }) | null;
+  lesson?: (Lesson & { year: Year }) | null;
+  creativeNote?: (CreativeNote & { year: Year }) | null;
+};
+
+
 
 // Types for Tiptap content
 import type { TiptapContent } from "@/types";
@@ -1096,7 +1125,7 @@ export async function createHighlight(
     }
 
     // Build data object for Prisma
-    const data: any = {
+    const data: Prisma.HighlightUncheckedCreateInput = {
       text: validated.text,
       startOffset: validated.startOffset,
       endOffset: validated.endOffset,
@@ -1141,7 +1170,7 @@ export async function createHighlight(
     // console.log(JSON.stringify(data, null, 2));
 
     // Prepare includes to get year for revalidation
-    const include: any = { tags: true };
+    const include: Prisma.HighlightInclude = { tags: true };
     switch (validated.entityType) {
       case "dailyLog":
         include.dailyLog = { include: { year: true } };
@@ -1176,7 +1205,7 @@ export async function createHighlight(
 
     try {
       let yearNumber: number | undefined;
-      const h = highlight as any;
+      const h = highlight as unknown as HighlightWithRelations;
       if (h.dailyLog) yearNumber = h.dailyLog.year.year;
       else if (h.quarterlyReflection) yearNumber = h.quarterlyReflection.year.year;
       else if (h.goal) yearNumber = h.goal.year.year;
@@ -1190,7 +1219,7 @@ export async function createHighlight(
         revalidatePath(`/year/${yearNumber}`);
       }
     revalidatePath("/dashboard");
-    } catch (e) {
+    } catch {
       // Ignore revalidation errors in test environment
     }
     return { success: true, data: highlight };
@@ -1214,7 +1243,7 @@ export async function createTag(userId: string, name: string) {
     try {
       // Revalidate dashboard only - tags are global
       revalidatePath("/dashboard");
-    } catch (e) {
+    } catch {
       // Ignore revalidation errors in test environment
     }
     return { success: true, data: tag };
@@ -1378,7 +1407,7 @@ export async function getTaggedContentByTag(userId: string, tagId: string) {
     // console.log("Raw Highlights from DB:", JSON.stringify(highlights, null, 2));
 
     // Transform highlights into tagged content with source information
-    const taggedContent = highlights.map((highlight: any) => {
+    const taggedContent = highlights.map((highlight) => {
       type SectionType =
         | "daily-logs"
         | "quarterly-reflections"
@@ -1554,7 +1583,7 @@ export async function getTaggedContentByTagAndYear(
     });
 
     // Map highlights to tagged content with source information
-    const taggedContent = highlights.map((highlight: any) => {
+    const taggedContent = highlights.map((highlight) => {
       type SectionType =
         | "daily-logs"
         | "quarterly-reflections"
@@ -1638,7 +1667,7 @@ export async function getTaggedContentByTagAndYear(
       };
     });
 
-    const validContent = taggedContent.filter((c: any) => c.source !== null);
+    const validContent = taggedContent.filter((c) => c.source !== null);
     return { success: true, data: validContent };
   } catch (error) {
     console.error("Error fetching tagged content by tag and year:", error);
@@ -1724,7 +1753,7 @@ export async function getAllTaggedContent(userId: string) {
 
     // Transform into a more usable format
     const taggedContentByTag = tags.map((tag) => {
-      const content = tag.highlights.map((highlight: any) => {
+      const content = tag.highlights.map((highlight) => {
         type SectionType =
           | "daily-logs"
           | "quarterly-reflections"

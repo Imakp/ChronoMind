@@ -2,6 +2,17 @@ import { useState, useCallback } from "react";
 import { Editor } from "@tiptap/react";
 import { createHighlight, getOrCreateTags } from "@/lib/actions";
 import { toast } from "sonner";
+import type { Tag } from "@prisma/client";
+
+type HighlightEntityType =
+  | "dailyLog"
+  | "quarterlyReflection"
+  | "goal"
+  | "task"
+  | "subtask"
+  | "chapter"
+  | "lesson"
+  | "creativeNote";
 
 export function useHighlightManager(
   editor: Editor | null,
@@ -87,7 +98,7 @@ export function useHighlightManager(
         if (!tagsResult.success || !tagsResult.data)
           throw new Error("Tag error");
 
-        const tagIds = tagsResult.data.map((t: any) => t.id);
+        const tagIds = tagsResult.data.map((t: Tag) => t.id);
 
         // console.log("--- createHighlight PAYLOAD ---");
         // console.log("Entity Type:", entityContext.type);
@@ -97,7 +108,7 @@ export function useHighlightManager(
         // console.log("Tag IDs:", tagIds);
 
         await createHighlight(
-          entityContext.type as any,
+          entityContext.type as HighlightEntityType,
           entityContext.id,
           text,
           from,

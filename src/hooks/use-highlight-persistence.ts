@@ -23,7 +23,7 @@ export function useHighlightPersistence(
     // We use a single transaction to apply all missing highlights at once
     // This is highly performant (one re-render)
     const { state, view } = editor;
-    let transaction = state.tr;
+    const transaction = state.tr;
     let modified = false;
 
     highlights.forEach((h) => {
@@ -60,7 +60,7 @@ export function useHighlightPersistence(
             // Create the mark using the stored metadata
             const mark = state.schema.marks.highlightWithTags.create({
               id: h.tiptapId,
-              tags: h.tags?.map((t: any) => t.name) || [], // Ensure tags are mapped correctly
+              tags: h.tags?.map((t) => t.name) || [], // Ensure tags are mapped correctly
             });
 
             transaction.addMark(h.startOffset, h.endOffset, mark);

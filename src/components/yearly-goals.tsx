@@ -13,7 +13,6 @@ import {
   deleteSubTask,
   updateGoal,
   updateTask,
-  updateSubTask,
 } from "@/lib/actions";
 import type {
   GoalWithRelations,
@@ -54,6 +53,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { getUserFriendlyError } from "@/lib/error-handler";
 import { cn } from "@/lib/utils";
+
+type AppRouter = ReturnType<typeof useRouter>;
 
 interface YearlyGoalsProps {
   yearId: string;
@@ -188,11 +189,11 @@ function GoalItem({
 }: {
   goal: GoalWithRelations;
   index: number;
-  router: any;
+  router: AppRouter;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(goal.title);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const handleUpdate = () => {
     if (!editTitle.trim()) return;
@@ -345,11 +346,11 @@ function TaskList({
 }: {
   goalId: string;
   tasks: TaskWithRelations[];
-  router: any;
+  router: AppRouter;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const handleCreateTask = () => {
     if (!newTaskTitle.trim()) return;
@@ -402,11 +403,11 @@ function TaskList({
   );
 }
 
-function TaskItem({ task, router }: { task: TaskWithRelations; router: any }) {
+function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const handleUpdate = () => {
     if (!editTitle.trim()) return;
@@ -528,11 +529,11 @@ function SubTaskList({
 }: {
   taskId: string;
   subtasks: SubTaskWithRelations[];
-  router: any;
+  router: AppRouter;
 }) {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const handleAdd = () => {
     if (!title.trim()) return;
