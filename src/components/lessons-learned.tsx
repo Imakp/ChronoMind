@@ -14,6 +14,7 @@ import {
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 // REMOVED: Dialog imports
 import {
   Trash2,
@@ -310,9 +311,9 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
               </div>
 
                {/* Title Input */}
-               <div className="max-w-3xl mx-auto w-full mb-6">
-                 <input
-                    value={editingLesson.title}
+               <div className="max-w-3xl mx-auto w-full mb-6 px-4 md:px-0"> {/* FIX #1 for title too */}
+                 <Input
+                   value={editingLesson.title}
                     onChange={(e) =>
                     handleTitleChange(editingLesson.id, e.target.value)
                     }
@@ -332,7 +333,7 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
 
               {/* Editor Area */}
               <div className="flex-1 overflow-y-auto -mx-4 sm:-mx-8">
-                <div className="max-w-3xl mx-auto">
+                <div className="max-w-3xl mx-auto px-4 md:px-0"> {/* FIX #1 */}
                   <EditorWithPersistence
                     key={editingLesson.id}
                     entityType="lesson"
@@ -345,7 +346,7 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
                     onContentChange={(c) => handleContentChange(editingLesson.id, c)}
                     placeholder="Detail your insight..."
                     variant="minimal"
-                    className="prose-lg"
+                    className="prose-base md:prose-lg" // FIX #4
                     highlights={[]}
                   />
                 </div>

@@ -586,7 +586,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
 
                 {/* Editor Area */}
                 <div className="flex-1 overflow-y-auto -mx-4 sm:-mx-8">
-                  <div className="max-w-3xl mx-auto">
+                  <div className="max-w-3xl mx-auto px-4 md:px-0"> {/* FIX #1 */}
                     <EditorWithPersistence
                         key={activeChapter.id}
                         entityType="chapter"
@@ -596,7 +596,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                         onContentChange={handleChapterSave}
                         placeholder="Start your notes or summary here..."
                         variant="minimal"
-                        className="prose-lg"
+                        className="prose-base md:prose-lg" // FIX #4
                     />
                   </div>
                 </div>

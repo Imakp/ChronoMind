@@ -369,17 +369,14 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                onFocus={() => setIsFocused(true)}
             >
               <EditorWithPersistence
-                key={selectedLog.id} // CRITICAL: Reset editor when switching logs
+                key={isDateToday ? "today-log" : "future-log-placeholder"}
                 entityType="dailyLog"
-                entityId={selectedLog.id}
-                initialContent={
-                  (selectedLog.content as TiptapContent) || { type: "doc", content: [] }
-                }
-                highlights={selectedLog.highlights || []}
-                onContentChange={handleContentChange}
+                entityId={selectedLog?.id || "temp"}
+                initialContent={{ type: "doc", content: [] }}
+                onContentChange={() => {}}
                 placeholder="Backfill your memory... What happened on this day?"
                 variant="minimal"
-                className="prose-lg"
+                className="prose-base md:prose-lg" // FIX #4: Responsive text size
               />
               {isFocused && (
                  <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
@@ -430,7 +427,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                   )}
                 </div>
 
-                <div className="max-w-3xl mx-auto">
+                <div className="max-w-3xl mx-auto px-4 md:px-0"> {/* FIX #1: Added px-4 for mobile gap */}
                    <div className={cn(
                       "mb-8 text-center transition-all duration-700 delay-100",
                        isFocused ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 hidden"
@@ -451,7 +448,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                      onContentChange={handleContentChange}
                      placeholder="What's on your mind today? Highlight text to tag it..."
                      variant="minimal"
-                     className="prose-lg"
+                     className="prose-base md:prose-lg" // FIX #4: Responsive size
                    />
                 </div>
             </div>

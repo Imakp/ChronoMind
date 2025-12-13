@@ -271,7 +271,7 @@ export function QuarterlyReflections({
 
                 {/* Editor Area */}
                 <div className="flex-1 overflow-y-auto -mx-4 sm:-mx-8">
-                  <div className="max-w-3xl mx-auto">
+                  <div className="max-w-3xl mx-auto px-4 md:px-0"> {/* FIX #1 */}
                     <EditorWithPersistence
                         key={`q${selectedQuarter}-editor`}
                         entityType="quarterlyReflection"
@@ -289,7 +289,7 @@ export function QuarterlyReflections({
                         onContentChange={handleContentChange}
                         placeholder={`Reflect on ${activeQuarterMeta.label}. What were your biggest wins? Challenges?`}
                         variant="minimal"
-                        className="prose-xl"
+                        className="prose-base md:prose-xl" // FIX #4
                     />
                   </div>
                 </div>

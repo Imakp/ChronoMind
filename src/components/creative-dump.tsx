@@ -267,7 +267,7 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
 
               {/* Editor Area */}
               <div className="flex-1 overflow-y-auto -mx-4 sm:-mx-8">
-                <div className="max-w-3xl mx-auto h-full">
+                <div className="max-w-3xl mx-auto h-full px-4 md:px-0"> {/* FIX #1 */}
                   <EditorWithPersistence
                     key={editingNote.id}
                     entityType="creativeNote"
@@ -276,7 +276,7 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
                     onContentChange={(c) => handleContentChange(editingNote.id, c)}
                     placeholder="Capture the idea..."
                     variant="minimal" // Zen Mode variant
-                    className="prose-lg"
+                    className="prose-base md:prose-lg" // FIX #4
                     highlights={editingNote.highlights || []}
                   />
                 </div>
