@@ -162,13 +162,18 @@ export function AppShell({ children, year, userId }: AppShellProps) {
         <SidebarContent year={year} userId={userId} setMobileOpen={setMobileOpen} />
       </aside>
 
-      {/* Mobile Header - Fix #2 (z-[100]) & Fix #3 (Link) */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-[100] bg-background/80 backdrop-blur-md border-b border-border p-4 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-primary text-primary-foreground rounded-md flex items-center justify-center font-serif font-bold text-sm">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border p-4 flex items-center justify-between">
+        <Link
+          href="/"
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+        >
+          <div className="w-8 h-8 bg-primary text-primary-foreground rounded-lg flex items-center justify-center font-serif font-bold text-xl">
             C
           </div>
-          <span className="font-serif font-bold text-lg">ChronoMind</span>
+          <span className="font-serif font-bold text-lg">
+            ChronoMind
+          </span>
         </Link>
         <Button
           variant="ghost"
