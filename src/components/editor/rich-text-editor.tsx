@@ -20,15 +20,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import type { TiptapContent } from "@/types";
+import { Highlight } from "@prisma/client";
+
 interface RichTextEditorProps {
-  content: any;
-  onChange: (content: any) => void;
+  content: TiptapContent | undefined;
+  onChange: (content: TiptapContent) => void;
   placeholder?: string;
   editable?: boolean;
   entityType: string;
   entityId: string;
   userId: string;
-  highlights?: any[]; // Accept highlights from parent
+  highlights?: Highlight[]; // Accept highlights from parent
   variant?: "default" | "minimal" | "clean";
 }
 
@@ -89,7 +92,7 @@ export function RichTextEditor({
     editable,
     immediatelyRender: false,
     onUpdate: ({ editor }) => {
-      onChange(editor.getJSON());
+      onChange(editor.getJSON() as TiptapContent);
     },
     editorProps: {
       attributes: {
@@ -97,6 +100,7 @@ export function RichTextEditor({
           "prose prose-sm max-w-none focus:outline-none px-3 sm:px-4 py-3",
           variant === 'minimal' ? "min-h-[300px] sm:prose-base prose-xl px-0 py-0" : "min-h-[200px]"
         ),
+        "data-placeholder": placeholder,
       },
     },
   });
@@ -132,8 +136,6 @@ export function RichTextEditor({
   if (!editor) {
     return null;
   }
-
-
 
   return (
     <div 
@@ -323,6 +325,7 @@ export function RichTextEditor({
           .ProseMirror.prose ul,
           .ProseMirror.prose ol {
             padding-left: 1.25em;
+            padding-right: 1.25em;
           }
         }
       `}</style>

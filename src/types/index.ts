@@ -15,9 +15,15 @@ import {
   Highlight,
 } from "@prisma/client";
 
+export type { Chapter };
+
 export type UserWithRelations = User & {
   years: Year[];
   tags: Tag[];
+};
+
+export type DailyLogWithRelations = DailyLog & {
+  highlights: Highlight[];
 };
 
 export type YearWithRelations = Year & {
@@ -26,7 +32,7 @@ export type YearWithRelations = Year & {
   goals: GoalWithRelations[];
   genres: GenreWithRelations[];
   lessons: Lesson[];
-  creativeNotes: CreativeNote[];
+  creativeNotes: CreativeNoteWithRelations[];
 };
 
 export type GoalWithRelations = Goal & {
@@ -47,15 +53,26 @@ export type GenreWithRelations = Genre & {
   books: BookWithRelations[];
 };
 
+export type ChapterWithRelations = Chapter & {
+  highlights: Highlight[];
+};
+
+export type CreativeNoteWithRelations = CreativeNote & {
+  highlights: Highlight[];
+};
+
 export type BookWithRelations = Book & {
-  chapters: Chapter[];
+  chapters: ChapterWithRelations[];
 };
 
 export type TiptapContent = {
   type: string;
   content?: TiptapContent[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   attrs?: Record<string, any>;
   text?: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  marks?: Array<{ type: string; attrs?: any }>;
 };
 
 export type ContentSource = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getTagsForYear, getTaggedContentByTagAndYear } from "@/lib/actions";
 import type { TaggedContent } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import {
   Search,
   ExternalLink,
   Loader2,
+  LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,7 +38,7 @@ interface TagExplorerProps {
   initialContent?: TaggedContent[];
 }
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, LucideIcon> = {
   "daily-logs": Calendar,
   "book-notes": BookOpen,
   "quarterly-reflections": PenTool,
@@ -54,6 +55,16 @@ export function TagExplorer({ userId, year, initialTags, initialSelectedTagId, i
   const [contentLoading, setContentLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const handleTagClick = useCallback(async (tagId: string) => {
+    setSelectedTag(tagId);
+    setContentLoading(true);
+    const result = await getTaggedContentByTagAndYear(userId, tagId, year);
+    if (result.success && result.data) {
+      setTaggedContent(result.data);
+    }
+    setContentLoading(false);
+  }, [userId, year]);
+
   // Load tags specifically for this year
   useEffect(() => {
     if (initialTags) {
@@ -67,7 +78,7 @@ export function TagExplorer({ userId, year, initialTags, initialSelectedTagId, i
       const result = await getTagsForYear(userId, year);
       if (result.success && result.data) {
         setTags(
-          result.data.map((t: any) => ({
+          result.data.map((t: { id: string; name: string; _count: { highlights: number } }) => ({
             id: t.id,
             name: t.name,
             count: t._count.highlights, // Uses the filtered count from server
@@ -81,17 +92,8 @@ export function TagExplorer({ userId, year, initialTags, initialSelectedTagId, i
       setTagsLoading(false);
     };
     loadTags();
-  }, [userId, year, initialTags]);
-
-  const handleTagClick = async (tagId: string) => {
-    setSelectedTag(tagId);
-    setContentLoading(true);
-    const result = await getTaggedContentByTagAndYear(userId, tagId, year);
-    if (result.success && result.data) {
-      setTaggedContent(result.data);
-    }
-    setContentLoading(false);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, year, initialTags, handleTagClick]);
 
   // Helper to get URL
   const getSourceUrl = (source: TaggedContent["source"]) => {
@@ -298,7 +300,7 @@ export function TagExplorer({ userId, year, initialTags, initialSelectedTagId, i
                         </CardHeader>
                         <CardContent className="px-5 pb-5">
                           <blockquote className="font-serif text-lg leading-relaxed border-l-4 border-yellow-400/50 pl-4 py-1 text-foreground/90 bg-yellow-50/30 rounded-r-lg">
-                            "{item.text}"
+                            &quot;{item.text}&quot;
                           </blockquote>
                           {/* Related Tags */}
                           {item.tags.length > 1 && (

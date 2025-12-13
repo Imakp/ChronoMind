@@ -5,7 +5,7 @@ import { X, Plus, Tag as TagIcon, Check, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getTags } from "@/lib/actions"; // We'll use this to fetch tags
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 interface HighlightMenuProps {
   position: { x: number; y: number };
@@ -42,7 +42,7 @@ export function HighlightMenu({
       setIsLoading(true);
       const result = await getTags(userId);
       if (result.success && result.data) {
-        setAvailableTags(result.data.map((t: any) => ({ id: t.id, name: t.name })));
+        setAvailableTags(result.data.map((t: { id: string; name: string }) => ({ id: t.id, name: t.name })));
       }
       setIsLoading(false);
     };
@@ -173,7 +173,7 @@ export function HighlightMenu({
            </button>
         </div>
         <p className="text-xs text-foreground/80 font-serif italic border-l-2 border-primary/20 pl-2 line-clamp-2">
-           "{selectedText}"
+            &quot;{selectedText}&quot;
         </p>
       </div>
 
@@ -233,7 +233,7 @@ export function HighlightMenu({
                      <div className="w-5 h-5 rounded-full bg-secondary flex items-center justify-center shrink-0">
                         <Plus className="w-3 h-3" />
                      </div>
-                     <span className="truncate">Create <span className="font-semibold text-foreground">"{inputValue}"</span></span>
+                     <span className="truncate">Create <span className="font-semibold text-foreground">&quot;{inputValue}&quot;</span></span>
                   </button>
                )}
 

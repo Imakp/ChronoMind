@@ -27,9 +27,15 @@ interface AppShellProps {
   userId: string;
 }
 
-export function AppShell({ children, year, userId }: AppShellProps) {
+
+interface SidebarContentProps {
+  year: number;
+  userId: string;
+  setMobileOpen: (open: boolean) => void;
+}
+
+function SidebarContent({ year, userId, setMobileOpen }: SidebarContentProps) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const { data: session } = useSession();
 
   const navigation = [
@@ -46,7 +52,7 @@ export function AppShell({ children, year, userId }: AppShellProps) {
     { name: "Tags", href: `/year/${year}/tags`, icon: Tag },
   ];
 
-  const SidebarContent = () => (
+  return (
     <div className="flex flex-col h-full py-6 bg-secondary/30 border-r border-border">
       {/* Brand */}
       <div className="px-6 mb-8">
@@ -144,12 +150,16 @@ export function AppShell({ children, year, userId }: AppShellProps) {
       </div>
     </div>
   );
+}
+
+export function AppShell({ children, year, userId }: AppShellProps) {
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden md:block w-64 fixed inset-y-0 z-50">
-        <SidebarContent />
+        <SidebarContent year={year} userId={userId} setMobileOpen={setMobileOpen} />
       </aside>
 
       {/* Mobile Header */}
@@ -172,7 +182,7 @@ export function AppShell({ children, year, userId }: AppShellProps) {
             onClick={() => setMobileOpen(false)}
           />
           <div className="md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-background border-r border-border">
-            <SidebarContent />
+            <SidebarContent year={year} userId={userId} setMobileOpen={setMobileOpen} />
           </div>
         </>
       )}

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,12 +13,11 @@ import {
   createBook,
   createChapter,
   updateChapter,
-  getBookNotes,
   deleteGenre,
   deleteBook,
   deleteChapter,
 } from "@/lib/actions";
-import type { GenreWithRelations } from "@/types";
+import type { GenreWithRelations, BookWithRelations, ChapterWithRelations, TiptapContent } from "@/types";
 import {
   Plus,
   Book,
@@ -60,7 +59,7 @@ const getBookColor = (id: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
+export function BookNotes({ yearId, initialData }: BookNotesProps) {
   // Navigation State
   const [view, setView] = useState<"genres" | "books" | "chapters" | "editor">(
     "genres"
@@ -69,8 +68,8 @@ export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
   const [activeGenre, setActiveGenre] = useState<GenreWithRelations | null>(
     null
   );
-  const [activeBook, setActiveBook] = useState<any | null>(null);
-  const [activeChapter, setActiveChapter] = useState<any | null>(null);
+  const [activeBook, setActiveBook] = useState<BookWithRelations | null>(null);
+  const [activeChapter, setActiveChapter] = useState<ChapterWithRelations | null>(null);
 
   // Data State
   const [genres, setGenres] = useState<GenreWithRelations[]>(initialData || []);
@@ -83,14 +82,10 @@ export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
   useEffect(() => {
     if (initialData) {
       setGenres(initialData);
-      refreshActiveObjects(initialData);
-    }
-  }, [initialData]);
-
-  const refreshActiveObjects = (currentGenres: GenreWithRelations[]) => {
+      
       // Refresh active objects if data updates
       if (activeGenre) {
-        const updatedGenre = currentGenres.find((g) => g.id === activeGenre.id);
+        const updatedGenre = initialData.find((g) => g.id === activeGenre.id);
         setActiveGenre(updatedGenre || null);
         if (updatedGenre && activeBook) {
           const updatedBook = updatedGenre.books.find(
@@ -105,7 +100,9 @@ export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
           }
         }
       }
-  };
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData]);
 
   const loadBookNotes = () => {
      // Deprecated: Now handled via server props + router.refresh()
@@ -165,7 +162,7 @@ export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
     });
   };
 
-  const handleChapterSave = async (content: any) => {
+  const handleChapterSave = async (content: TiptapContent) => {
     if (!activeChapter || !activeBook || !activeGenre) return;
 
     // Optimistic update
@@ -514,17 +511,12 @@ export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
               </p>
             </div>
           )}
-          {activeBook.chapters.map((chapter: any, index: number) => (
+          {activeBook.chapters.map((chapter: ChapterWithRelations, index: number) => (
             <Card
               key={chapter.id}
               className="hover:border-primary/50 transition-all cursor-pointer group"
                 onClick={() => {
-                setActiveChapter({
-                  id: chapter.id,
-                  title: chapter.title,
-                  content: chapter.content || { type: "doc", content: [] },
-                  highlights: chapter.highlights || [],
-                });
+                setActiveChapter(chapter);
                 setIsZenMode(true);
               }}
             >
@@ -631,7 +623,7 @@ export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
                 {activeChapter.title}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {activeBook.title}
+                {activeBook?.title}
               </p>
             </div>
             <Badge variant="outline" className="font-mono text-xs">

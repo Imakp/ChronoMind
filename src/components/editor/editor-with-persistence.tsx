@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { RichTextEditor } from "./rich-text-editor";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
+import type { TiptapContent } from "@/types";
+import { Highlight } from "@prisma/client";
+
 interface EditorWithPersistenceProps {
   entityType: "creativeNote" | "lesson" | "dailyLog" | "quarterlyReflection" | "chapter";
   entityId: string;
-  initialContent?: any;
-  onContentChange?: (content: any) => void;
+  initialContent?: TiptapContent;
+  onContentChange?: (content: TiptapContent) => void;
   placeholder?: string;
   editable?: boolean;
-  highlights?: any[];
+  highlights?: Highlight[];
   variant?: "default" | "minimal" | "clean";
   className?: string;
 }
@@ -29,15 +32,17 @@ export function EditorWithPersistence({
   className,
 }: EditorWithPersistenceProps) {
   const { data: session } = useSession();
-  const [content, setContent] = useState(initialContent);
+  const [content, setContent] = useState<TiptapContent | undefined>(initialContent);
+  const [prevInitialContent, setPrevInitialContent] = useState(initialContent);
 
-  // Reset content when entityId or initialContent changes
-  useEffect(() => {
+  // Sync with server props (render-time adjustment pattern)
+  if (initialContent !== prevInitialContent) {
+    setPrevInitialContent(initialContent);
     setContent(initialContent);
-  }, [entityId, initialContent]);
+  }
 
   const handleContentChange = useCallback(
-    (newContent: any) => {
+    (newContent: TiptapContent) => {
       setContent(newContent);
       if (onContentChange) {
         onContentChange(newContent);

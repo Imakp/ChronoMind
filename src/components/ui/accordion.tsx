@@ -14,6 +14,15 @@ const AccordionContext = React.createContext<AccordionContextValue | undefined>(
   undefined
 );
 
+// New: Context for the individual item to share its value with children
+type AccordionItemContextValue = {
+  value: string;
+};
+
+const AccordionItemContext = React.createContext<AccordionItemContextValue | undefined>(
+  undefined
+);
+
 interface AccordionProps {
   type: "single" | "multiple";
   collapsible?: boolean;
@@ -56,13 +65,17 @@ const Accordion = ({
 const AccordionItem = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & { value: string }
->(({ className, value, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("border-b", className)}
-    data-value={value}
-    {...props}
-  />
+>(({ className, value, children, ...props }, ref) => (
+  <AccordionItemContext.Provider value={{ value }}>
+    <div
+      ref={ref}
+      className={cn("border-b", className)}
+      data-value={value}
+      {...props}
+    >
+      {children}
+    </div>
+  </AccordionItemContext.Provider>
 ));
 AccordionItem.displayName = "AccordionItem";
 
@@ -71,11 +84,13 @@ const AccordionTrigger = React.forwardRef<
   React.ButtonHTMLAttributes<HTMLButtonElement>
 >(({ className, children, ...props }, ref) => {
   const context = React.useContext(AccordionContext);
-  const itemValue =
-    (props as any)["data-value"] ||
-    (ref as any)?.current?.closest("[data-value]")?.getAttribute("data-value");
+  const itemContext = React.useContext(AccordionItemContext);
 
-  const isOpen = context?.value === itemValue;
+  if (!itemContext) {
+    throw new Error("AccordionTrigger must be used within an AccordionItem");
+  }
+
+  const isOpen = context?.value === itemContext.value;
 
   return (
     <button
@@ -84,7 +99,8 @@ const AccordionTrigger = React.forwardRef<
         "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
         className
       )}
-      onClick={() => context?.onValueChange(itemValue)}
+      data-state={isOpen ? "open" : "closed"}
+      onClick={() => context?.onValueChange(itemContext.value)}
       {...props}
     >
       {children}
@@ -97,18 +113,32 @@ AccordionTrigger.displayName = "AccordionTrigger";
 const AccordionContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, children, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down",
-      className
-    )}
-    {...props}
-  >
-    <div className="pb-4 pt-0">{children}</div>
-  </div>
-));
+>(({ className, children, ...props }, ref) => {
+  const context = React.useContext(AccordionContext);
+  const itemContext = React.useContext(AccordionItemContext);
+
+  if (!itemContext) {
+    throw new Error("AccordionContent must be used within an AccordionItem");
+  }
+
+  const isOpen = context?.value === itemContext.value;
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={ref}
+      data-state={isOpen ? "open" : "closed"}
+      className={cn(
+        "overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down",
+        className
+      )}
+      {...props}
+    >
+      <div className="pb-4 pt-0">{children}</div>
+    </div>
+  );
+});
 AccordionContent.displayName = "AccordionContent";
 
 export { Accordion, AccordionItem, AccordionTrigger, AccordionContent };

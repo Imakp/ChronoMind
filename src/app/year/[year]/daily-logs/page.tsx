@@ -3,7 +3,10 @@ import { DailyLogs } from "@/components/daily-logs";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserYears, getDailyLogsList, getOrCreateDailyLog } from "@/lib/actions";
+
+
 import { Loader2 } from "lucide-react";
+import type { DailyLog } from "@prisma/client";
 
 interface DailyLogsPageProps {
   params: Promise<{
@@ -43,7 +46,7 @@ export default async function DailyLogsPage({ params }: DailyLogsPageProps) {
       <DailyLogs 
         yearId={userYear.id} 
         year={userYear.year} 
-        initialLogs={initialLogs as any} // Cast because list logs might miss content, but component expects DailyLog[]
+        initialLogs={initialLogs as unknown as DailyLog[]} // Cast because list logs might miss content, but component expects DailyLog[]
         todayLog={todayLog}
       />
     </Suspense>

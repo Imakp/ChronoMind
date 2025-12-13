@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { DailyLog } from "@prisma/client";
+import type { DailyLogWithRelations, TiptapContent } from "@/types";
 import {
   format,
   addDays,
@@ -26,7 +27,6 @@ import { EditorWithPersistence } from "./editor/editor-with-persistence";
 import {
   getOrCreateDailyLog,
   updateDailyLog,
-  getDailyLogsList,
 } from "@/lib/actions";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
@@ -35,7 +35,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "./ui/skeleton";
 
 interface DailyLogsProps {
   yearId: string;
@@ -44,7 +43,7 @@ interface DailyLogsProps {
   todayLog: DailyLog | null;
 }
 
-export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProps) {
+export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
   // State
   // Merge initialLogs with todayLog if it's not in the list (it should be if list is fresh, but just in case)
   const [logs, setLogs] = useState<Partial<DailyLog>[]>(() => {
@@ -57,8 +56,8 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
   const [currentDate, setCurrentDate] = useState(new Date());
   
   // Initialize selectedLog with todayLog if dates match, otherwise null or find from logs
-  const [selectedLog, setSelectedLog] = useState<DailyLog | null>(() => {
-    if (isSameDay(new Date(), currentDate) && todayLog) return todayLog;
+  const [selectedLog, setSelectedLog] = useState<DailyLogWithRelations | null>(() => {
+    if (isSameDay(new Date(), currentDate) && todayLog) return todayLog as unknown as DailyLogWithRelations;
     return null;
   });
 
@@ -75,9 +74,10 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
   // Helper to check if a log has meaningful content
   const hasContent = (log?: Partial<DailyLog> | null) => {
     if (!log || !log.content) return false;
-    const content = log.content as any;
+    if (!log || !log.content) return false;
+    const content = log.content as unknown as TiptapContent;
     // Simple check: if it has text or multiple blocks
-    if (content.content?.length > 1) return true;
+    if ((content.content?.length || 0) > 1) return true;
     if (content.content?.[0]?.content) return true;
     return false;
   };
@@ -101,8 +101,8 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
       );
 
       // If cached log has content (it was fully fetched or is todayLog), use it.
-      if (cachedLog && (cachedLog as any).content) {
-        setSelectedLog(cachedLog as DailyLog);
+      if (cachedLog && (cachedLog as unknown as DailyLogWithRelations).content) {
+        setSelectedLog(cachedLog as unknown as DailyLogWithRelations);
         setIsLoadingLog(false);
         return;
       }
@@ -112,7 +112,7 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
         // Use getOrCreateDailyLog which returns the FULL log
         const result = await getOrCreateDailyLog(yearId, currentDate);
         if (result.success && result.data) {
-          setSelectedLog(result.data);
+          setSelectedLog(result.data as unknown as DailyLogWithRelations);
           // Update local cache with the FULL log
           setLogs((prev) => {
             const existingIndex = prev.findIndex((l) => l.id === result.data!.id);
@@ -131,7 +131,7 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
     };
 
     fetchLogForDate();
-  }, [currentDate, yearId, isDateFuture]); 
+  }, [currentDate, yearId, isDateFuture, logs]); 
 
   // Navigation Handlers
   const handlePrevDay = () => setCurrentDate((prev) => subDays(prev, 1));
@@ -140,7 +140,7 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
 
   // Auto-save
   const handleContentChange = useCallback(
-    (content: any) => {
+    (content: TiptapContent) => {
       if (!selectedLog) return;
 
       // Optimistic local update
@@ -336,10 +336,10 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
                 <Clock className="w-8 h-8 text-muted-foreground" />
               </div>
               <h3 className="font-serif text-2xl font-medium mb-3">
-                You're ahead of time
+                You&apos;re ahead of time
               </h3>
               <p className="text-muted-foreground mb-8 leading-relaxed">
-                You can't log memories that haven't happened yet. Use the Goals
+                You can&apos;t log memories that haven&apos;t happened yet. Use the Goals
                 section to plan ahead, or wait for the future to arrive.
               </p>
               <Button onClick={jumpToToday} variant="outline">
@@ -355,8 +355,8 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
                 Missed Entry
               </AlertTitle>
               <AlertDescription className="text-amber-700/80 dark:text-amber-400/80 mt-1">
-                You didn't log anything for {format(currentDate, "MMMM do")}.
-                It's never too late to backfill a quick summary.
+                You didn&apos;t log anything for {format(currentDate, "MMMM do")}.
+                It&apos;s never too late to backfill a quick summary.
               </AlertDescription>
             </Alert>
             <div 
@@ -375,7 +375,7 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
                 initialContent={
                   selectedLog.content || { type: "doc", content: [] }
                 }
-                highlights={(selectedLog as any).highlights || []}
+                highlights={selectedLog.highlights || []}
                 onContentChange={handleContentChange}
                 placeholder="Backfill your memory... What happened on this day?"
                 variant="minimal"
@@ -447,7 +447,7 @@ export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProp
                      initialContent={
                        selectedLog.content || { type: "doc", content: [] }
                      }
-                     highlights={(selectedLog as any).highlights || []}
+                     highlights={selectedLog.highlights || []}
                      onContentChange={handleContentChange}
                      placeholder="What's on your mind today? Highlight text to tag it..."
                      variant="minimal"

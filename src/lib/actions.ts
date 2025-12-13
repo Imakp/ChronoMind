@@ -29,18 +29,8 @@ import {
 import { handleActionError } from "./error-handler";
 
 // Types for Tiptap content
-export type TiptapContent = {
-  type: "doc";
-  content?: Array<{
-    type: string;
-    content?: Array<{
-      type: string;
-      text?: string;
-      marks?: Array<{ type: string; attrs?: any }>;
-    }>;
-    attrs?: any;
-  }>;
-};
+import type { TiptapContent } from "@/types";
+
 
 // Year Management Actions
 export async function createYear(userId: string, year: number) {

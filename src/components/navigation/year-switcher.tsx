@@ -15,31 +15,23 @@ export function YearSwitcher({ userId }: YearSwitcherProps) {
   const router = useRouter();
   const [years, setYears] = useState<Year[]>([]);
   const [isOpen, setIsOpen] = useState(false);
-  const [currentYear, setCurrentYear] = useState<number | null>(null);
-
-  // Detect current year from pathname
-  useEffect(() => {
-    const match = pathname.match(/\/year\/(\d{4})/);
-    if (match) {
-      setCurrentYear(parseInt(match[1]));
-    } else {
-      setCurrentYear(null);
-    }
-  }, [pathname]);
+  // Detect current year from pathname (derived state)
+  const match = pathname.match(/\/year\/(\d{4})/);
+  const currentYear = match ? parseInt(match[1]) : null;
 
   // Load user's years
   useEffect(() => {
+    const loadYears = async () => {
+      const result = await getUserYears(userId);
+      if (result.success && result.data) {
+        setYears(result.data.sort((a, b) => b.year - a.year));
+      }
+    };
+
     if (userId) {
       loadYears();
     }
   }, [userId]);
-
-  const loadYears = async () => {
-    const result = await getUserYears(userId);
-    if (result.success && result.data) {
-      setYears(result.data.sort((a, b) => b.year - a.year));
-    }
-  };
 
   // Don't show if not on a year page
   if (!currentYear) {

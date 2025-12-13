@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Lesson } from "@prisma/client";
+import { TiptapContent } from "@/types";
 import { EditorWithPersistence } from "./editor";
 import {
   createLesson,
   updateLesson,
   deleteLesson,
-  getLessons,
 } from "@/lib/actions";
 // ... existing imports ...
 import { Button } from "./ui/button";
@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 // REMOVED: Dialog imports
 import {
-  Plus,
   Trash2,
   Lightbulb,
   Quote,
@@ -56,26 +55,28 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
   const [lessons, setLessons] = useState<Lesson[]>(initialData || []);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [savingLessons, setSavingLessons] = useState<Set<string>>(new Set());
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const router = useRouter();
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lessonsRef = useRef<Lesson[]>([]);
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+
+  // Sync with server updates (derived state pattern)
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
+    if (initialData) {
+      setLessons(initialData);
+    }
+  }
 
   useEffect(() => {
     lessonsRef.current = lessons;
   }, [lessons]);
 
   // Sync with server updates
-  useEffect(() => {
-    if (initialData) {
-        setLessons(initialData);
-    }
-  }, [initialData]);
 
-  const loadLessons = () => {
-    // Deprecated: Using server props + router.refresh()
-    router.refresh();
-  };
+
+
 
   const handleCreateLesson = async () => {
     startTransition(async () => {
@@ -123,7 +124,7 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
       setSavingLessons((prev) => new Set(prev).add(lessonId));
       const lesson = lessonsRef.current.find((l) => l.id === lessonId);
       if (lesson) {
-        await updateLesson(lessonId, newTitle, lesson.content as any);
+        await updateLesson(lessonId, newTitle, lesson.content as unknown as TiptapContent);
         setSavingLessons((prev) => {
           const newSet = new Set(prev);
           newSet.delete(lessonId);
@@ -135,10 +136,10 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
     saveTimeoutsRef.current.set(lessonId, timeout);
   };
 
-  const handleContentChange = useCallback((lessonId: string, content: any) => {
+  const handleContentChange = useCallback((lessonId: string, content: TiptapContent) => {
     setLessons((prev) =>
       prev.map((l) =>
-        l.id === lessonId ? { ...l, content: content as any } : l
+        l.id === lessonId ? { ...l, content: content as unknown as Lesson["content"] } : l
       )
     );
 
@@ -161,10 +162,11 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
     saveTimeoutsRef.current.set(lessonId, timeout);
   }, []);
 
-  const getPreviewText = (content: any) => {
-    if (!content || !content.content) return "No details added yet...";
-    return content.content
-      .map((node: any) => node.content?.map((t: any) => t.text).join(" ") || "")
+  const getPreviewText = (content: Lesson["content"]) => {
+    const typedContent = content as unknown as TiptapContent;
+    if (!typedContent || !typedContent.content) return "No details added yet...";
+    return typedContent.content
+      .map((node: TiptapContent) => node.content?.map((t: TiptapContent) => t.text).join(" ") || "")
       .join(" ");
   };
 
@@ -334,12 +336,16 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
                     key={editingLesson.id}
                     entityType="lesson"
                     entityId={editingLesson.id}
-                    initialContent={editingLesson.content}
+                    initialContent={
+                      editingLesson.content
+                        ? (editingLesson.content as unknown as TiptapContent)
+                        : undefined
+                    }
                     onContentChange={(c) => handleContentChange(editingLesson.id, c)}
                     placeholder="Detail your insight..."
                     variant="minimal"
                     className="prose-lg"
-                    highlights={(editingLesson as any).highlights || []}
+                    highlights={[]}
                   />
                 </div>
               </div>

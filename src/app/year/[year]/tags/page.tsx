@@ -3,7 +3,16 @@ import { redirect } from "next/navigation";
 import { TagExplorer } from "@/components/tag-explorer";
 import { getTagsForYear, getTaggedContentByTagAndYear } from "@/lib/actions";
 import { Suspense } from "react";
+
 import { Loader2 } from "lucide-react";
+
+import type { TaggedContent } from "@/types";
+
+interface TagWithCount {
+  id: string;
+  name: string;
+  count: number;
+}
 
 interface TagsPageProps {
   params: Promise<{
@@ -24,12 +33,12 @@ export default async function TagsPage({ params }: TagsPageProps) {
   // Fetch initial tags server-side
   const tagsResult = await getTagsForYear(session.user.id, yearNumber);
   
-  let initialTags: any[] = [];
-  let initialContent: any[] = [];
+  let initialTags: TagWithCount[] = [];
+  let initialContent: TaggedContent[] = [];
   let initialSelectedTagId: string | null = null;
 
   if (tagsResult.success && tagsResult.data) {
-     initialTags = tagsResult.data.map((t: any) => ({
+     initialTags = tagsResult.data.map((t) => ({
         id: t.id,
         name: t.name,
         count: t._count.highlights,

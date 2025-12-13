@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { QuarterlyReflection } from "@prisma/client";
+import { TiptapContent } from "@/types";
 import { EditorWithPersistence } from "./editor";
 import {
-  getQuarterlyReflections,
   updateQuarterlyReflection,
 } from "@/lib/actions";
 // ... existing imports ...
@@ -69,13 +69,15 @@ export function QuarterlyReflections({
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const router = useRouter();
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
 
-  // Sync with server
-  useEffect(() => {
+  // Sync with server (derived state pattern)
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
     if (initialData) {
-        setReflections(initialData);
+      setReflections(initialData);
     }
-  }, [initialData]);
+  }
 
   const loadReflections = useCallback(async () => {
     // Deprecated: Using server props + router.refresh()
@@ -83,19 +85,20 @@ export function QuarterlyReflections({
   }, [router]);
 
   // Helper to extract text preview from Tiptap JSON
-  const getPreviewText = (content: any) => {
-    if (!content || !content.content) return null;
-    const text = content.content
-      .map((node: any) => node.content?.map((t: any) => t.text).join(" ") || "")
+  // Helper to extract text preview from Tiptap JSON
+  const getPreviewText = (content: QuarterlyReflection["content"] | undefined) => {
+    if (!content || !(content as unknown as TiptapContent).content) return null;
+    const typedContent = content as unknown as TiptapContent;
+    const text = typedContent.content?.map((node) => node.content?.map((t) => t.text).join(" ") || "")
       .join(" ");
-    return text.length > 150 ? text.slice(0, 150) + "..." : text;
+    return text && text.length > 150 ? text.slice(0, 150) + "..." : text;
   };
 
   // Helper to determine status
   const getStatus = (reflection?: QuarterlyReflection) => {
     const hasContent =
       reflection?.content &&
-      (reflection.content as any).content?.length > 0 &&
+      ((reflection.content as unknown as TiptapContent).content?.length ?? 0) > 0 &&
       getPreviewText(reflection.content);
     if (hasContent) return "In Progress";
     return "Not Started";
@@ -103,7 +106,7 @@ export function QuarterlyReflections({
 
   // Auto-save handler
   const handleContentChange = useCallback(
-    (content: any) => {
+    (content: TiptapContent) => {
       if (!selectedQuarter) return;
 
       // Optimistic update
@@ -134,7 +137,7 @@ export function QuarterlyReflections({
 
       setSaveTimeout(timeout);
     },
-    [yearId, selectedQuarter, saveTimeout]
+    [yearId, selectedQuarter, saveTimeout, loadReflections]
   );
 
   const activeReflection = reflections.find(
@@ -277,12 +280,12 @@ export function QuarterlyReflections({
                             `${yearId}-q${selectedQuarter}-temp`
                         }
                         initialContent={
-                            activeReflection?.content || {
+                            (activeReflection?.content as unknown as TiptapContent) || {
                             type: "doc",
                             content: [],
                             }
                         }
-                        highlights={(activeReflection as any)?.highlights || []}
+                        highlights={[]}
                         onContentChange={handleContentChange}
                         placeholder={`Reflect on ${activeQuarterMeta.label}. What were your biggest wins? Challenges?`}
                         variant="minimal"

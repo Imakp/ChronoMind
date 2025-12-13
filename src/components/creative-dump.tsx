@@ -2,26 +2,26 @@
 
 import { useState, useEffect, useRef, useCallback, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CreativeNote } from "@prisma/client";
+
 import { EditorWithPersistence } from "./editor";
+import type { CreativeNoteWithRelations, TiptapContent } from "@/types";
 import {
   createCreativeNote,
   updateCreativeNote,
   deleteCreativeNote,
-  getCreativeNotes,
 } from "@/lib/actions";
-// ... existing imports ...
 import { Button } from "./ui/button";
-// REMOVED: Dialog imports
-import { Plus, Trash2, Hash, Sparkles, Calendar, ArrowLeft } from "lucide-react";
+import { Trash2, Hash, Sparkles, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
+
+
 interface CreativeDumpProps {
   yearId: string;
   year: number;
-  initialData?: CreativeNote[];
+  initialData?: CreativeNoteWithRelations[];
 }
 
 // Vibrant "Sticky Note" colors
@@ -42,29 +42,30 @@ const getNoteColor = (id: string) => {
 };
 
 export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
-  const [notes, setNotes] = useState<CreativeNote[]>(initialData || []);
-  const [editingNote, setEditingNote] = useState<CreativeNote | null>(null);
+  const [notes, setNotes] = useState<CreativeNoteWithRelations[]>(initialData || []);
+  const [prevInitialData, setPrevInitialData] = useState(initialData);
+
+  // Sync with server props (render-time adjustment pattern)
+  if (initialData !== prevInitialData) {
+    setPrevInitialData(initialData);
+    setNotes(initialData || []);
+  }
+  const [editingNote, setEditingNote] = useState<CreativeNoteWithRelations | null>(null);
   const [savingNotes, setSavingNotes] = useState<Set<string>>(new Set());
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const router = useRouter();
   const saveTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const notesRef = useRef<CreativeNote[]>([]);
+  const notesRef = useRef<CreativeNoteWithRelations[]>([]);
 
   useEffect(() => {
     notesRef.current = notes;
   }, [notes]);
 
   // Sync with server
-  useEffect(() => {
-    if (initialData) {
-        setNotes(initialData);
-    }
-  }, [initialData]);
+  // Sync with server
 
-  const loadNotes = () => {
-    // Deprecated: using server props
-    router.refresh();
-  };
+
+
 
   const handleCreateNote = async () => {
     startTransition(async () => {
@@ -73,9 +74,12 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
         content: [],
       });
       if (result.success && result.data) {
+        // Optimistic update - we need to cast or ensure data matches
+        // For now, assuming result.data matches CreativeNoteWithRelations (empty highlights)
+        const newNote = { ...result.data, highlights: [] } as CreativeNoteWithRelations;
         router.refresh();
-        setNotes([result.data, ...notes]);
-        setEditingNote(result.data);
+        setNotes([newNote, ...notes]);
+        setEditingNote(newNote);
         toast.success("New note created");
       }
     });
@@ -94,8 +98,9 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
     });
   };
 
-  const handleContentChange = useCallback((noteId: string, content: any) => {
+  const handleContentChange = useCallback((noteId: string, content: TiptapContent) => {
     setNotes((prev) =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       prev.map((n) => (n.id === noteId ? { ...n, content: content as any } : n))
     );
 
@@ -115,12 +120,13 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
     saveTimeoutsRef.current.set(noteId, timeout);
   }, []);
 
-  const getPlainText = (content: any) => {
-    if (!content || !content.content) return "Empty note...";
-    const text = content.content
-      .map((node: any) => node.content?.map((t: any) => t.text).join(" ") || "")
-      .join(" ");
-    return text.trim() || "Empty note...";
+  const getPlainText = (content: unknown) => {
+    if (!content) return "Empty note...";
+    const typedContent = content as TiptapContent;
+    if (!typedContent.content) return "Empty note...";
+    
+    const text = typedContent.content?.map((node) => node.content?.map((t) => t.text).join(" ") || "").join(" ");
+    return text?.trim() || "Empty note...";
   };
 
   const isEditing = !!editingNote;
@@ -266,12 +272,12 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
                     key={editingNote.id}
                     entityType="creativeNote"
                     entityId={editingNote.id}
-                    initialContent={editingNote.content}
+                    initialContent={(editingNote.content as unknown as TiptapContent) ?? undefined}
                     onContentChange={(c) => handleContentChange(editingNote.id, c)}
                     placeholder="Capture the idea..."
                     variant="minimal" // Zen Mode variant
                     className="prose-lg"
-                    highlights={(editingNote as any).highlights || []}
+                    highlights={editingNote.highlights || []}
                   />
                 </div>
               </div>
