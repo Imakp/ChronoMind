@@ -373,7 +373,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                 entityType="dailyLog"
                 entityId={selectedLog.id}
                 initialContent={
-                  selectedLog.content || { type: "doc", content: [] }
+                  (selectedLog.content as TiptapContent) || { type: "doc", content: [] }
                 }
                 highlights={selectedLog.highlights || []}
                 onContentChange={handleContentChange}
@@ -445,7 +445,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                      entityType="dailyLog"
                      entityId={selectedLog.id}
                      initialContent={
-                       selectedLog.content || { type: "doc", content: [] }
+                       (selectedLog.content as TiptapContent) || { type: "doc", content: [] }
                      }
                      highlights={selectedLog.highlights || []}
                      onContentChange={handleContentChange}

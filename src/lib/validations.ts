@@ -1,15 +1,15 @@
 import { z } from "zod";
 
 // Tiptap content validation - Recursive schema that handles blocks AND text nodes
-const tiptapNodeSchema: z.ZodType<any> = z.lazy(
+const tiptapNodeSchema: z.ZodType<unknown> = z.lazy(
   () =>
     z
       .object({
         type: z.string(),
         // Allow marks (bold, italic, highlight)
-        marks: z.array(z.any()).optional(),
+        marks: z.array(z.record(z.string(), z.unknown())).optional(),
         // Allow attributes (links, headings, custom data)
-        attrs: z.record(z.string(), z.any()).optional(),
+        attrs: z.record(z.string(), z.unknown()).optional(),
         // Allow text content (for text nodes)
         text: z.string().optional(),
         // Recursive content (for block nodes)
@@ -233,39 +233,41 @@ export function sanitizeHtml(html: string): string {
 }
 
 // Helper function to validate and sanitize Tiptap content
-export function sanitizeTiptapContent(content: any): any {
+export function sanitizeTiptapContent(content: unknown): unknown {
   if (!content || typeof content !== "object") {
     return { type: "doc", content: [] };
   }
 
-  const sanitizeNode = (node: any): any => {
+  const sanitizeNode = (node: unknown): unknown => {
     if (!node || typeof node !== "object") return node;
 
-    const sanitized = { ...node };
+    const nodeRecord = node as Record<string, unknown>;
+    const sanitized: Record<string, unknown> = { ...nodeRecord };
 
     // Preserve content array (recursive)
-    if (node.content && Array.isArray(node.content)) {
-      sanitized.content = node.content.map(sanitizeNode);
+    if (nodeRecord.content && Array.isArray(nodeRecord.content)) {
+      sanitized.content = nodeRecord.content.map(sanitizeNode);
     }
 
     // Preserve and sanitize text
-    if (node.text && typeof node.text === "string") {
-      sanitized.text = node.text
+    if (nodeRecord.text && typeof nodeRecord.text === "string") {
+      sanitized.text = nodeRecord.text
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
         .replace(/javascript:/gi, "");
     }
 
     // CRITICAL FIX: Preserve marks array (bold, italic, highlight, etc.)
-    if (node.marks && Array.isArray(node.marks)) {
-      sanitized.marks = node.marks.map((mark: any) => {
+    if (nodeRecord.marks && Array.isArray(nodeRecord.marks)) {
+      sanitized.marks = nodeRecord.marks.map((mark: unknown) => {
         if (!mark || typeof mark !== "object") return mark;
+        const markRecord = mark as Record<string, unknown>;
 
         // Preserve mark type and attributes
-        const sanitizedMark: any = { type: mark.type };
+        const sanitizedMark: { type: unknown; attrs?: Record<string, unknown> } = { type: markRecord.type };
 
         // Preserve mark attributes (needed for highlights, links, etc.)
-        if (mark.attrs && typeof mark.attrs === "object") {
-          sanitizedMark.attrs = { ...mark.attrs };
+        if (markRecord.attrs && typeof markRecord.attrs === "object") {
+          sanitizedMark.attrs = { ...(markRecord.attrs as Record<string, unknown>) };
         }
 
         return sanitizedMark;
@@ -273,8 +275,8 @@ export function sanitizeTiptapContent(content: any): any {
     }
 
     // Preserve attributes (needed for headings, lists, etc.)
-    if (node.attrs && typeof node.attrs === "object") {
-      sanitized.attrs = { ...node.attrs };
+    if (nodeRecord.attrs && typeof nodeRecord.attrs === "object") {
+      sanitized.attrs = { ...(nodeRecord.attrs as Record<string, unknown>) };
     }
 
     return sanitized;

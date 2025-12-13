@@ -591,7 +591,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                         key={activeChapter.id}
                         entityType="chapter"
                         entityId={activeChapter.id}
-                        initialContent={activeChapter.content}
+                        initialContent={(activeChapter.content as TiptapContent) || undefined}
                         highlights={activeChapter.highlights || []}
                         onContentChange={handleChapterSave}
                         placeholder="Start your notes or summary here..."
@@ -636,7 +636,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                 key={activeChapter.id}
                 entityType="chapter"
                 entityId={activeChapter.id}
-                initialContent={activeChapter.content}
+                initialContent={(activeChapter.content as TiptapContent) || undefined}
                 highlights={activeChapter.highlights || []}
                 onContentChange={handleChapterSave}
                 placeholder="Write your chapter notes, quotes, and thoughts here..."

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { YearlyGoals } from "@/components/yearly-goals";
+import { GoalWithRelations } from "@/types";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { getUserYears, getGoals } from "@/lib/actions";
@@ -25,7 +26,7 @@ export default async function YearlyGoalsPage({
   if (!userYear) redirect("/");
 
   const goalsResult = await getGoals(userYear.id);
-  const initialGoals = goalsResult.success && goalsResult.data ? goalsResult.data : [];
+  const initialGoals = goalsResult.success && goalsResult.data ? (goalsResult.data as GoalWithRelations[]) : [];
 
   return (
     <Suspense 

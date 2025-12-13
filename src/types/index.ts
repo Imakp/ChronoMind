@@ -61,6 +61,10 @@ export type CreativeNoteWithRelations = CreativeNote & {
   highlights: Highlight[];
 };
 
+export type LessonWithRelations = Lesson & {
+  highlights: Highlight[];
+};
+
 export type BookWithRelations = Book & {
   chapters: ChapterWithRelations[];
 };

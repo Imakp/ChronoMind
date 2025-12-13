@@ -83,7 +83,7 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
         router.refresh();
         toast.success("Goal created successfully");
         if (result.data) {
-          setGoals(prev => [...prev, result.data!]);
+          setGoals(prev => [...prev, result.data as GoalWithRelations]);
         }
       } else {
         toast.error(getUserFriendlyError(result.error));

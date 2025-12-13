@@ -76,7 +76,7 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
       if (result.success && result.data) {
         // Optimistic update - we need to cast or ensure data matches
         // For now, assuming result.data matches CreativeNoteWithRelations (empty highlights)
-        const newNote = { ...result.data, highlights: [] } as CreativeNoteWithRelations;
+        const newNote = { ...(result.data as unknown as CreativeNoteWithRelations), highlights: [] };
         router.refresh();
         setNotes([newNote, ...notes]);
         setEditingNote(newNote);

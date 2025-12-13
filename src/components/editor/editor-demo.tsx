@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { RichTextEditor } from "./rich-text-editor";
+import { TiptapContent } from "@/types";
 
 export function EditorDemo() {
-  const [content, setContent] = useState({
+  const [content, setContent] = useState<TiptapContent>({
     type: "doc",
     content: [
       {

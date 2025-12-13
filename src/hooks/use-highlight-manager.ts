@@ -98,7 +98,7 @@ export function useHighlightManager(
         if (!tagsResult.success || !tagsResult.data)
           throw new Error("Tag error");
 
-        const tagIds = tagsResult.data.map((t: Tag) => t.id);
+        const tagIds = (tagsResult.data as Tag[]).map((t: Tag) => t.id);
 
         // console.log("--- createHighlight PAYLOAD ---");
         // console.log("Entity Type:", entityContext.type);

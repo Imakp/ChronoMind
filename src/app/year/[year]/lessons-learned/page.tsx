@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getLessons, getUserYears } from "@/lib/actions";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { LessonWithRelations } from "@/types";
 
 interface LessonsLearnedPageProps {
   params: Promise<{
@@ -26,7 +27,7 @@ export default async function LessonsLearnedPage({
 
   // Fetch initial data server-side
   const initialDataResult = await getLessons(userYear.id);
-  const initialData = initialDataResult.success && initialDataResult.data ? initialDataResult.data : [];
+  const initialData = initialDataResult.success && initialDataResult.data ? (initialDataResult.data as LessonWithRelations[]) : [];
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>}>

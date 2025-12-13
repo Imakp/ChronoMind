@@ -1,6 +1,6 @@
 import { ZodError } from "zod";
 
-export type ActionResult<T = any> = {
+export type ActionResult<T = unknown> = {
   success: boolean;
   data?: T;
   error?: string;
@@ -10,7 +10,7 @@ export type ActionResult<T = any> = {
 /**
  * Handles errors from server actions and returns a consistent error response
  */
-export function handleActionError(error: unknown): ActionResult {
+export function handleActionError<T = unknown>(error: unknown): ActionResult<T> {
   console.error("Action error:", error);
 
   // Handle Zod validation errors
@@ -33,7 +33,7 @@ export function handleActionError(error: unknown): ActionResult {
 
   // Handle Prisma errors
   if (error && typeof error === "object" && "code" in error) {
-    const prismaError = error as any;
+    const prismaError = error as { code: string };
 
     switch (prismaError.code) {
       case "P2002":
@@ -82,14 +82,14 @@ export function handleActionError(error: unknown): ActionResult {
 /**
  * Wraps a server action with error handling
  */
-export function withErrorHandling<T extends any[], R>(
+export function withErrorHandling<T extends unknown[], R>(
   fn: (...args: T) => Promise<ActionResult<R>>
 ): (...args: T) => Promise<ActionResult<R>> {
   return async (...args: T): Promise<ActionResult<R>> => {
     try {
       return await fn(...args);
     } catch (error) {
-      return handleActionError(error);
+      return handleActionError<R>(error);
     }
   };
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCreativeNotes, getUserYears } from "@/lib/actions";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
+import { CreativeNoteWithRelations } from "@/types";
 
 interface CreativeDumpPageProps {
   params: Promise<{
@@ -26,7 +27,7 @@ export default async function CreativeDumpPage({
 
   // Fetch initial data
   const initialDataResult = await getCreativeNotes(userYear.id);
-  const initialData = initialDataResult.success && initialDataResult.data ? initialDataResult.data : [];
+  const initialData = initialDataResult.success && initialDataResult.data ? (initialDataResult.data as CreativeNoteWithRelations[]) : [];
 
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>}>

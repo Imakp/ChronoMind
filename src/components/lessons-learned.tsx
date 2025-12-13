@@ -85,9 +85,10 @@ export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProp
         content: [],
       });
       if (result.success && result.data) {
+        const newLesson = result.data as Lesson;
         router.refresh();
-        setLessons([result.data, ...lessons]);
-        setEditingLesson(result.data);
+        setLessons([newLesson, ...lessons]);
+        setEditingLesson(newLesson);
         toast.success("Insight captured");
       } else {
         toast.error(getUserFriendlyError(result.error));
