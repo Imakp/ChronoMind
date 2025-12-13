@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 interface LessonsLearnedProps {
   yearId: string;
   year: number;
+  initialData?: Lesson[];
 }
 
 // Pastel color palette for cards
@@ -51,8 +52,8 @@ const getLessonColor = (id: string) => {
   return CARD_COLORS[Math.abs(hash) % CARD_COLORS.length];
 };
 
-export function LessonsLearned({ yearId, year }: LessonsLearnedProps) {
-  const [lessons, setLessons] = useState<Lesson[]>([]);
+export function LessonsLearned({ yearId, year, initialData }: LessonsLearnedProps) {
+  const [lessons, setLessons] = useState<Lesson[]>(initialData || []);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const [savingLessons, setSavingLessons] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -64,15 +65,16 @@ export function LessonsLearned({ yearId, year }: LessonsLearnedProps) {
     lessonsRef.current = lessons;
   }, [lessons]);
 
+  // Sync with server updates
   useEffect(() => {
-    loadLessons();
-  }, [yearId]);
-
-  const loadLessons = async () => {
-    const result = await getLessons(yearId);
-    if (result.success && result.data) {
-      setLessons(result.data);
+    if (initialData) {
+        setLessons(initialData);
     }
+  }, [initialData]);
+
+  const loadLessons = () => {
+    // Deprecated: Using server props + router.refresh()
+    router.refresh();
   };
 
   const handleCreateLesson = async () => {

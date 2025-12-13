@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 interface CreativeDumpProps {
   yearId: string;
   year: number;
+  initialData?: CreativeNote[];
 }
 
 // Vibrant "Sticky Note" colors
@@ -40,8 +41,8 @@ const getNoteColor = (id: string) => {
   return NOTE_COLORS[Math.abs(hash) % NOTE_COLORS.length];
 };
 
-export function CreativeDump({ yearId }: CreativeDumpProps) {
-  const [notes, setNotes] = useState<CreativeNote[]>([]);
+export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
+  const [notes, setNotes] = useState<CreativeNote[]>(initialData || []);
   const [editingNote, setEditingNote] = useState<CreativeNote | null>(null);
   const [savingNotes, setSavingNotes] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -53,15 +54,16 @@ export function CreativeDump({ yearId }: CreativeDumpProps) {
     notesRef.current = notes;
   }, [notes]);
 
+  // Sync with server
   useEffect(() => {
-    loadNotes();
-  }, [yearId]);
-
-  const loadNotes = async () => {
-    const result = await getCreativeNotes(yearId);
-    if (result.success && result.data) {
-      setNotes(result.data);
+    if (initialData) {
+        setNotes(initialData);
     }
+  }, [initialData]);
+
+  const loadNotes = () => {
+    // Deprecated: using server props
+    router.refresh();
   };
 
   const handleCreateNote = async () => {

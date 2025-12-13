@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -8,7 +8,6 @@ import {
   createTask,
   createSubTask,
   toggleSubTask,
-  getGoals,
   deleteGoal,
   deleteTask,
   deleteSubTask,
@@ -59,24 +58,15 @@ import { cn } from "@/lib/utils";
 interface YearlyGoalsProps {
   yearId: string;
   year: number;
+  initialGoals: GoalWithRelations[];
 }
 
-export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
-  const [goals, setGoals] = useState<GoalWithRelations[]>([]);
+export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
+  const [goals, setGoals] = useState<GoalWithRelations[]>(initialGoals);
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
-
-  useEffect(() => {
-    const loadGoals = async () => {
-      const result = await getGoals(yearId);
-      if (result.success && result.data) {
-        setGoals(result.data);
-      }
-    };
-    loadGoals();
-  }, [yearId]);
 
   const handleCreateGoal = async () => {
     if (!newGoalTitle.trim()) {
@@ -91,8 +81,9 @@ export function YearlyGoals({ yearId, year }: YearlyGoalsProps) {
         setIsAddingGoal(false);
         router.refresh();
         toast.success("Goal created successfully");
-        const updated = await getGoals(yearId);
-        if (updated.success && updated.data) setGoals(updated.data);
+        if (result.data) {
+          setGoals(prev => [...prev, result.data!]);
+        }
       } else {
         toast.error(getUserFriendlyError(result.error));
       }

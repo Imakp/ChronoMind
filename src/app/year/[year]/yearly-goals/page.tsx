@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { YearlyGoals } from "@/components/yearly-goals";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { getUserYears } from "@/lib/actions";
+import { getUserYears, getGoals } from "@/lib/actions";
+import { Loader2 } from "lucide-react";
 
 interface YearlyGoalsPageProps {
   params: Promise<{
@@ -22,5 +24,18 @@ export default async function YearlyGoalsPage({
 
   if (!userYear) redirect("/");
 
-  return <YearlyGoals yearId={userYear.id} year={userYear.year} />;
+  const goalsResult = await getGoals(userYear.id);
+  const initialGoals = goalsResult.success && goalsResult.data ? goalsResult.data : [];
+
+  return (
+    <Suspense 
+      fallback={
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <YearlyGoals yearId={userYear.id} year={userYear.year} initialGoals={initialGoals} />
+    </Suspense>
+  );
 }

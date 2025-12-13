@@ -32,6 +32,9 @@ interface TagWithCount {
 interface TagExplorerProps {
   userId: string;
   year: number;
+  initialTags?: TagWithCount[];
+  initialSelectedTagId?: string | null;
+  initialContent?: TaggedContent[];
 }
 
 const iconMap: Record<string, any> = {
@@ -43,16 +46,22 @@ const iconMap: Record<string, any> = {
   "creative-dump": Sparkles,
 };
 
-export function TagExplorer({ userId, year }: TagExplorerProps) {
-  const [tags, setTags] = useState<TagWithCount[]>([]);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [taggedContent, setTaggedContent] = useState<TaggedContent[]>([]);
-  const [tagsLoading, setTagsLoading] = useState(true);
+export function TagExplorer({ userId, year, initialTags, initialSelectedTagId, initialContent }: TagExplorerProps) {
+  const [tags, setTags] = useState<TagWithCount[]>(initialTags || []);
+  const [selectedTag, setSelectedTag] = useState<string | null>(initialSelectedTagId || null);
+  const [taggedContent, setTaggedContent] = useState<TaggedContent[]>(initialContent || []);
+  const [tagsLoading, setTagsLoading] = useState(!initialTags);
   const [contentLoading, setContentLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   // Load tags specifically for this year
   useEffect(() => {
+    if (initialTags) {
+        setTags(initialTags);
+        setTagsLoading(false);
+        return;
+    }
+
     const loadTags = async () => {
       setTagsLoading(true);
       const result = await getTagsForYear(userId, year);
@@ -64,7 +73,7 @@ export function TagExplorer({ userId, year }: TagExplorerProps) {
             count: t._count.highlights, // Uses the filtered count from server
           }))
         );
-        // Auto-select first tag if available
+        // Auto-select first tag if available and nothing selected
         if (result.data.length > 0 && !selectedTag) {
           handleTagClick(result.data[0].id);
         }
@@ -72,7 +81,7 @@ export function TagExplorer({ userId, year }: TagExplorerProps) {
       setTagsLoading(false);
     };
     loadTags();
-  }, [userId, year]);
+  }, [userId, year, initialTags]);
 
   const handleTagClick = async (tagId: string) => {
     setSelectedTag(tagId);

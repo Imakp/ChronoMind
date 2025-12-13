@@ -26,7 +26,7 @@ import { EditorWithPersistence } from "./editor/editor-with-persistence";
 import {
   getOrCreateDailyLog,
   updateDailyLog,
-  getDailyLogs,
+  getDailyLogsList,
 } from "@/lib/actions";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
@@ -40,13 +40,28 @@ import { Skeleton } from "./ui/skeleton";
 interface DailyLogsProps {
   yearId: string;
   year: number;
+  initialLogs: Partial<DailyLog>[]; // Logs from list fetch might not have content
+  todayLog: DailyLog | null;
 }
 
-export function DailyLogs({ yearId, year }: DailyLogsProps) {
+export function DailyLogs({ yearId, year, initialLogs, todayLog }: DailyLogsProps) {
   // State
-  const [logs, setLogs] = useState<DailyLog[]>([]);
+  // Merge initialLogs with todayLog if it's not in the list (it should be if list is fresh, but just in case)
+  const [logs, setLogs] = useState<Partial<DailyLog>[]>(() => {
+    if (todayLog && !initialLogs.find(l => l.id === todayLog.id)) {
+      return [todayLog, ...initialLogs];
+    }
+    return initialLogs;
+  });
+  
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedLog, setSelectedLog] = useState<DailyLog | null>(null);
+  
+  // Initialize selectedLog with todayLog if dates match, otherwise null or find from logs
+  const [selectedLog, setSelectedLog] = useState<DailyLog | null>(() => {
+    if (isSameDay(new Date(), currentDate) && todayLog) return todayLog;
+    return null;
+  });
+
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -58,7 +73,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
   const isDateFuture = isFuture(currentDate);
 
   // Helper to check if a log has meaningful content
-  const hasContent = (log?: DailyLog | null) => {
+  const hasContent = (log?: Partial<DailyLog> | null) => {
     if (!log || !log.content) return false;
     const content = log.content as any;
     // Simple check: if it has text or multiple blocks
@@ -69,39 +84,43 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
   const currentLogHasContent = hasContent(selectedLog);
 
-  // Load all logs index on mount
-  useEffect(() => {
-    const loadLogsIndex = async () => {
-      const result = await getDailyLogs(yearId);
-      if (result.success && result.data) {
-        setLogs(result.data);
-      }
-    };
-    loadLogsIndex();
-  }, [yearId]);
+  // NOTE: Initial fetch removed (Plan Phase 1)
 
   // Fetch/Create log when date changes
   useEffect(() => {
     const fetchLogForDate = async () => {
       setIsLoadingLog(true);
       // Check local cache first
+      // We seek a log that has CONTENT (since list logs might have empty content placeholder)
+      // Actually, if we selected the log previously, we have it in `logs` with content.
+      // But the initial `logs` from server MISS content.
+      // So we must fetch if the log in `state` doesn't have content loaded.
+      
       const cachedLog = logs.find((l) =>
-        isSameDay(new Date(l.date), currentDate)
+        isSameDay(new Date(l.date!), currentDate)
       );
-      if (cachedLog) {
-        setSelectedLog(cachedLog);
+
+      // If cached log has content (it was fully fetched or is todayLog), use it.
+      if (cachedLog && (cachedLog as any).content) {
+        setSelectedLog(cachedLog as DailyLog);
         setIsLoadingLog(false);
         return;
       }
 
-      // If not in cache and not future, fetch/create from server
+      // If not in cache or missing content, and not future, fetch/create from server
       if (!isDateFuture) {
+        // Use getOrCreateDailyLog which returns the FULL log
         const result = await getOrCreateDailyLog(yearId, currentDate);
         if (result.success && result.data) {
           setSelectedLog(result.data);
-          // Add to local cache if new
+          // Update local cache with the FULL log
           setLogs((prev) => {
-            if (prev.find((l) => l.id === result.data!.id)) return prev;
+            const existingIndex = prev.findIndex((l) => l.id === result.data!.id);
+            if (existingIndex >= 0) {
+              const newLogs = [...prev];
+              newLogs[existingIndex] = result.data!;
+              return newLogs;
+            }
             return [...prev, result.data!];
           });
         }
@@ -112,7 +131,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
     };
 
     fetchLogForDate();
-  }, [currentDate, yearId, isDateFuture]); // Removed logs from dependency to prevent loop
+  }, [currentDate, yearId, isDateFuture]); 
 
   // Navigation Handlers
   const handlePrevDay = () => setCurrentDate((prev) => subDays(prev, 1));
@@ -152,8 +171,8 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
 
   // Calendar Modifiers
   const filledDates = logs
-    .filter((l) => hasContent(l))
-    .map((l) => new Date(l.date));
+    .filter((l) => l.date && hasContent(l))
+    .map((l) => new Date(l.date!));
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20">
@@ -194,8 +213,11 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
           <div className="hidden lg:flex bg-secondary/30 rounded-lg p-1 mr-2 border border-border/50">
             {weekDays.map((day) => {
               const logForDay = logs.find((l) =>
-                isSameDay(new Date(l.date), day)
+                l.date && isSameDay(new Date(l.date), day)
               );
+              // Note: If content is missing (from initial list), dot might not show. 
+              // We accept this trade-off for performance, or user clicks to load.
+              // Ideally server sends a boolean 'hasContent'.
               const isFilled = hasContent(logForDay);
               const isSelected = isSameDay(day, currentDate);
               const isFut = isFuture(day);
@@ -204,7 +226,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                 <button
                   key={day.toISOString()}
                   onClick={() => setCurrentDate(day)}
-                  disabled={isFut && !isSameDay(day, new Date())} // Allow clicking future only if it's "today" (edge case)
+                  disabled={isFut && !isSameDay(day, new Date())} 
                   className={cn(
                     "w-10 h-10 rounded-md flex flex-col items-center justify-center text-[10px] font-medium transition-all relative",
                     isSelected
@@ -347,7 +369,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                onFocus={() => setIsFocused(true)}
             >
               <EditorWithPersistence
-                key={selectedLog.id}
+                key={selectedLog.id} // CRITICAL: Reset editor when switching logs
                 entityType="dailyLog"
                 entityId={selectedLog.id}
                 initialContent={
@@ -419,7 +441,7 @@ export function DailyLogs({ yearId, year }: DailyLogsProps) {
                    </div>
 
                    <EditorWithPersistence
-                     key={selectedLog.id}
+                     key={selectedLog.id} // CRITICAL: Reset editor when switching logs
                      entityType="dailyLog"
                      entityId={selectedLog.id}
                      initialContent={

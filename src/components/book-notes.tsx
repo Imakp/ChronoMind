@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 interface BookNotesProps {
   yearId: string;
   year: number;
+  initialData?: GenreWithRelations[];
 }
 
 // Helper to generate consistent colors for book covers based on string
@@ -59,7 +60,7 @@ const getBookColor = (id: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-export function BookNotes({ yearId, year }: BookNotesProps) {
+export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
   // Navigation State
   const [view, setView] = useState<"genres" | "books" | "chapters" | "editor">(
     "genres"
@@ -72,24 +73,24 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   const [activeChapter, setActiveChapter] = useState<any | null>(null);
 
   // Data State
-  const [genres, setGenres] = useState<GenreWithRelations[]>([]);
+  const [genres, setGenres] = useState<GenreWithRelations[]>(initialData || []);
   const [isAdding, setIsAdding] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // Load Data
+  // Sync state when server data updates (e.g. after revalidation)
   useEffect(() => {
-    loadBookNotes();
-  }, [yearId]);
+    if (initialData) {
+      setGenres(initialData);
+      refreshActiveObjects(initialData);
+    }
+  }, [initialData]);
 
-  const loadBookNotes = async () => {
-    const result = await getBookNotes(yearId);
-    if (result.success && result.data) {
-      setGenres(result.data);
+  const refreshActiveObjects = (currentGenres: GenreWithRelations[]) => {
       // Refresh active objects if data updates
       if (activeGenre) {
-        const updatedGenre = result.data.find((g) => g.id === activeGenre.id);
+        const updatedGenre = currentGenres.find((g) => g.id === activeGenre.id);
         setActiveGenre(updatedGenre || null);
         if (updatedGenre && activeBook) {
           const updatedBook = updatedGenre.books.find(
@@ -104,8 +105,14 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
           }
         }
       }
-    }
   };
+
+  const loadBookNotes = () => {
+     // Deprecated: Now handled via server props + router.refresh()
+     router.refresh(); 
+  };
+
+
 
   // --- Handlers ---
   const handleCreate = () => {
@@ -159,7 +166,28 @@ export function BookNotes({ yearId, year }: BookNotesProps) {
   };
 
   const handleChapterSave = async (content: any) => {
-    if (!activeChapter) return;
+    if (!activeChapter || !activeBook || !activeGenre) return;
+
+    // Optimistic update
+    setGenres((prevGenres) => 
+        prevGenres.map(g => {
+            if (g.id !== activeGenre.id) return g;
+            return {
+                ...g,
+                books: g.books.map(b => {
+                    if (b.id !== activeBook.id) return b;
+                    return {
+                        ...b,
+                        chapters: b.chapters.map(c => {
+                            if (c.id !== activeChapter.id) return c;
+                            return { ...c, content };
+                        })
+                    };
+                })
+            };
+        })
+    );
+
     await updateChapter(activeChapter.id, content);
   };
 

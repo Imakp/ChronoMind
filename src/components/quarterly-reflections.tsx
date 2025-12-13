@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { QuarterlyReflection } from "@prisma/client";
 import { EditorWithPersistence } from "./editor";
 import {
@@ -24,6 +25,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface QuarterlyReflectionsProps {
   yearId: string;
   year: number;
+  initialData?: QuarterlyReflection[];
 }
 
 const QUARTERS = [
@@ -60,24 +62,25 @@ const QUARTERS = [
 export function QuarterlyReflections({
   yearId,
   year,
+  initialData
 }: QuarterlyReflectionsProps) {
-  const [reflections, setReflections] = useState<QuarterlyReflection[]>([]);
+  const [reflections, setReflections] = useState<QuarterlyReflection[]>(initialData || []);
   const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const router = useRouter();
 
-  // Load reflections on mount
-  const loadReflections = useCallback(async () => {
-    const result = await getQuarterlyReflections(yearId);
-    if (result.success && result.data) {
-      setReflections(result.data);
-    }
-  }, [yearId]);
-
-  // Load reflections on mount
+  // Sync with server
   useEffect(() => {
-    loadReflections();
-  }, [loadReflections]);
+    if (initialData) {
+        setReflections(initialData);
+    }
+  }, [initialData]);
+
+  const loadReflections = useCallback(async () => {
+    // Deprecated: Using server props + router.refresh()
+    router.refresh();
+  }, [router]);
 
   // Helper to extract text preview from Tiptap JSON
   const getPreviewText = (content: any) => {

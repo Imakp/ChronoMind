@@ -1,7 +1,9 @@
 import { QuarterlyReflections } from "@/components/quarterly-reflections";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { getUserYears } from "@/lib/actions";
+import { getQuarterlyReflections, getUserYears } from "@/lib/actions";
+import { Suspense } from "react";
+import { Loader2 } from "lucide-react";
 
 interface QuarterlyReflectionsPageProps {
   params: Promise<{
@@ -22,5 +24,13 @@ export default async function QuarterlyReflectionsPage({
 
   if (!userYear) redirect("/");
 
-  return <QuarterlyReflections yearId={userYear.id} year={userYear.year} />;
+  // Fetch initial data
+  const initialDataResult = await getQuarterlyReflections(userYear.id);
+  const initialData = initialDataResult.success && initialDataResult.data ? initialDataResult.data : [];
+
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>}>
+        <QuarterlyReflections yearId={userYear.id} year={userYear.year} initialData={initialData} />
+    </Suspense>
+  );
 }

@@ -60,7 +60,7 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground selection:bg-yellow-200/50 selection:text-black;
+    @apply bg-background text-foreground selection:bg-primary/20 selection:text-foreground;
   }
   /* Smooth Typography for Reading */
   h1,
