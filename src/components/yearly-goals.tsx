@@ -51,10 +51,7 @@ import {
 } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { getUserFriendlyError } from "@/lib/error-handler";
 import { cn } from "@/lib/utils";
-
-type AppRouter = ReturnType<typeof useRouter>;
 
 interface YearlyGoalsProps {
   yearId: string;
@@ -66,31 +63,372 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
   const [goals, setGoals] = useState<GoalWithRelations[]>(initialGoals);
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition(); // We use this for the background server action
   const router = useRouter();
 
+  // Sync with server data when it eventually arrives
   useEffect(() => {
     setGoals(initialGoals);
   }, [initialGoals]);
 
+  // --- Optimistic Helpers ---
+
+  const calculateGoalPercentage = (tasks: TaskWithRelations[]) => {
+    if (tasks.length === 0) return 0;
+    const total = tasks.reduce((sum, task) => sum + task.percentage, 0);
+    return total / tasks.length;
+  };
+
+  const calculateTaskPercentage = (subtasks: SubTaskWithRelations[]) => {
+    if (subtasks.length === 0) return 0;
+    const completed = subtasks.filter((s) => s.isComplete).length;
+    return (completed / subtasks.length) * 100;
+  };
+
+  // --- Handlers ---
+
   const handleCreateGoal = async () => {
-    if (!newGoalTitle.trim()) {
-      toast.error("Please enter a goal title");
-      return;
-    }
+    if (!newGoalTitle.trim()) return;
+
+    const tempId = `temp-goal-${Date.now()}`;
+    const optimisticGoal: GoalWithRelations = {
+      id: tempId,
+      title: newGoalTitle,
+      yearId,
+      description: null,
+      percentage: 0,
+      tasks: [],
+      highlights: [],
+    };
+
+    // 1. Optimistic Update
+    setGoals((prev) => [...prev, optimisticGoal]);
+    setNewGoalTitle("");
+    setIsAddingGoal(false);
+
+    // 2. Server Action
+    startTransition(async () => {
+      try {
+        const result = await createGoal(yearId, optimisticGoal.title);
+        if (result.success && result.data) {
+          // Replace temp goal with real goal to get valid ID
+          setGoals((prev) =>
+            prev.map((g) => (g.id === tempId ? (result.data as GoalWithRelations) : g))
+          );
+          router.refresh();
+          toast.success("Goal created");
+        } else {
+          // Revert on failure
+          setGoals((prev) => prev.filter((g) => g.id !== tempId));
+          toast.error("Failed to create goal");
+        }
+      } catch {
+        setGoals((prev) => prev.filter((g) => g.id !== tempId));
+        toast.error("Error creating goal");
+      }
+    });
+  };
+
+  const handleDeleteGoal = (goalId: string) => {
+    const previousGoals = goals;
+    // 1. Optimistic Update
+    setGoals((prev) => prev.filter((g) => g.id !== goalId));
+
+    // 2. Server Action
+    startTransition(async () => {
+      try {
+        const result = await deleteGoal(goalId);
+        if (result.success) {
+          router.refresh();
+        } else {
+          setGoals(previousGoals);
+          toast.error("Failed to delete goal");
+        }
+      } catch {
+        setGoals(previousGoals);
+        toast.error("Error deleting goal");
+      }
+    });
+  };
+
+  const handleUpdateGoal = (goalId: string, title: string) => {
+    const previousGoals = goals;
+    setGoals((prev) =>
+      prev.map((g) => (g.id === goalId ? { ...g, title } : g))
+    );
 
     startTransition(async () => {
-      const result = await createGoal(yearId, newGoalTitle.trim());
+      const result = await updateGoal(goalId, title);
       if (result.success) {
-        setNewGoalTitle("");
-        setIsAddingGoal(false);
         router.refresh();
-        toast.success("Goal created successfully");
-        if (result.data) {
-          setGoals(prev => [...prev, result.data as GoalWithRelations]);
-        }
       } else {
-        toast.error(getUserFriendlyError(result.error));
+        setGoals(previousGoals);
+        toast.error("Failed to update goal");
+      }
+    });
+  };
+
+  // --- Task Handlers ---
+
+  const handleCreateTask = async (goalId: string, title: string) => {
+    const tempId = `temp-task-${Date.now()}`;
+    const optimisticTask: TaskWithRelations = {
+      id: tempId,
+      title,
+      goalId,
+      description: null,
+      percentage: 0,
+      subtasks: [],
+      highlights: [],
+    };
+
+    // 1. Optimistic Update
+    const previousGoals = goals;
+    setGoals((prev) =>
+      prev.map((g) => {
+        if (g.id === goalId) {
+          const newTasks = [...g.tasks, optimisticTask];
+          return {
+            ...g,
+            tasks: newTasks,
+            percentage: calculateGoalPercentage(newTasks),
+          };
+        }
+        return g;
+      })
+    );
+
+    // 2. Server Action
+    startTransition(async () => {
+      try {
+        const result = await createTask(goalId, title);
+        if (result.success && result.data) {
+          // Swap temp ID
+          setGoals((prev) =>
+            prev.map((g) => {
+              if (g.id === goalId) {
+                return {
+                  ...g,
+                  tasks: g.tasks.map((t) =>
+                    t.id === tempId ? (result.data as TaskWithRelations) : t
+                  ),
+                };
+              }
+              return g;
+            })
+          );
+          router.refresh();
+        } else {
+          setGoals(previousGoals);
+          toast.error("Failed to create phase");
+        }
+      } catch {
+        setGoals(previousGoals);
+        toast.error("Error creating phase");
+      }
+    });
+  };
+
+  const handleDeleteTask = (goalId: string, taskId: string) => {
+    const previousGoals = goals;
+    setGoals((prev) =>
+      prev.map((g) => {
+        if (g.id === goalId) {
+          const newTasks = g.tasks.filter((t) => t.id !== taskId);
+          return {
+            ...g,
+            tasks: newTasks,
+            percentage: calculateGoalPercentage(newTasks),
+          };
+        }
+        return g;
+      })
+    );
+
+    startTransition(async () => {
+      const result = await deleteTask(taskId);
+      if (result.success) {
+        router.refresh();
+      } else {
+        setGoals(previousGoals);
+        toast.error("Failed to delete phase");
+      }
+    });
+  };
+
+  const handleUpdateTask = (goalId: string, taskId: string, title: string) => {
+    const previousGoals = goals;
+    setGoals((prev) =>
+      prev.map((g) => {
+        if (g.id === goalId) {
+          return {
+            ...g,
+            tasks: g.tasks.map((t) => (t.id === taskId ? { ...t, title } : t)),
+          };
+        }
+        return g;
+      })
+    );
+
+    startTransition(async () => {
+      const result = await updateTask(taskId, title);
+      if (!result.success) {
+        setGoals(previousGoals);
+        toast.error("Failed to update phase");
+      }
+    });
+  };
+
+  // --- Subtask Handlers ---
+
+  const handleCreateSubTask = (goalId: string, taskId: string, title: string) => {
+    const tempId = `temp-sub-${Date.now()}`;
+    const optimisticSub: SubTaskWithRelations = {
+      id: tempId,
+      title,
+      taskId,
+      isComplete: false,
+      highlights: [],
+    };
+
+    const previousGoals = goals;
+
+    // 1. Optimistic Update (Deep)
+    setGoals((prev) =>
+      prev.map((g) => {
+        if (g.id === goalId) {
+          const updatedTasks = g.tasks.map((t) => {
+            if (t.id === taskId) {
+              const newSubtasks = [...t.subtasks, optimisticSub];
+              const newPercentage = calculateTaskPercentage(newSubtasks);
+              return { ...t, subtasks: newSubtasks, percentage: newPercentage };
+            }
+            return t;
+          });
+          return {
+            ...g,
+            tasks: updatedTasks,
+            percentage: calculateGoalPercentage(updatedTasks),
+          };
+        }
+        return g;
+      })
+    );
+
+    // 2. Server Action
+    startTransition(async () => {
+      try {
+        const result = await createSubTask(taskId, title);
+        if (result.success && result.data) {
+          // Swap temp ID
+          setGoals((prev) =>
+            prev.map((g) => {
+              if (g.id === goalId) {
+                return {
+                  ...g,
+                  tasks: g.tasks.map((t) => {
+                    if (t.id === taskId) {
+                      return {
+                        ...t,
+                        subtasks: t.subtasks.map((s) =>
+                          s.id === tempId ? (result.data as SubTaskWithRelations) : s
+                        ),
+                      };
+                    }
+                    return t;
+                  }),
+                };
+              }
+              return g;
+            })
+          );
+          router.refresh();
+        } else {
+          setGoals(previousGoals);
+          toast.error("Failed to add step");
+        }
+      } catch {
+        setGoals(previousGoals);
+        toast.error("Error adding step");
+      }
+    });
+  };
+
+  const handleToggleSubTask = (goalId: string, taskId: string, subTaskId: string) => {
+    const previousGoals = goals;
+
+    // 1. Optimistic Update (Deep Recalculation)
+    setGoals((prev) =>
+      prev.map((g) => {
+        if (g.id === goalId) {
+          const updatedTasks = g.tasks.map((t) => {
+            if (t.id === taskId) {
+              const newSubtasks = t.subtasks.map((s) =>
+                s.id === subTaskId ? { ...s, isComplete: !s.isComplete } : s
+              );
+              const newPercentage = calculateTaskPercentage(newSubtasks);
+              return { ...t, subtasks: newSubtasks, percentage: newPercentage };
+            }
+            return t;
+          });
+          return {
+            ...g,
+            tasks: updatedTasks,
+            percentage: calculateGoalPercentage(updatedTasks),
+          };
+        }
+        return g;
+      })
+    );
+
+    // 2. Server Action
+    startTransition(async () => {
+      try {
+        const result = await toggleSubTask(subTaskId);
+        if (result.success) {
+          router.refresh(); // Ensure eventual consistency
+        } else {
+          setGoals(previousGoals);
+          toast.error("Failed to update status");
+        }
+      } catch {
+        setGoals(previousGoals);
+        toast.error("Connection error");
+      }
+    });
+  };
+
+  const handleDeleteSubTask = (goalId: string, taskId: string, subTaskId: string) => {
+    const previousGoals = goals;
+
+    setGoals((prev) =>
+      prev.map((g) => {
+        if (g.id === goalId) {
+          const updatedTasks = g.tasks.map((t) => {
+            if (t.id === taskId) {
+              const newSubtasks = t.subtasks.filter((s) => s.id !== subTaskId);
+              const newPercentage = calculateTaskPercentage(newSubtasks);
+              return { ...t, subtasks: newSubtasks, percentage: newPercentage };
+            }
+            return t;
+          });
+          return {
+            ...g,
+            tasks: updatedTasks,
+            percentage: calculateGoalPercentage(updatedTasks),
+          };
+        }
+        return g;
+      })
+    );
+
+    startTransition(async () => {
+      const result = await deleteSubTask(subTaskId);
+      if (result.success) {
+        router.refresh();
+      } else {
+        setGoals(previousGoals);
+        toast.error("Failed to delete step");
       }
     });
   };
@@ -146,7 +484,7 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
                   />
                   <Button
                     onClick={handleCreateGoal}
-                    disabled={!newGoalTitle.trim() || isPending}
+                    disabled={!newGoalTitle.trim()}
                     size="lg"
                     className="h-12 px-8"
                   >
@@ -176,7 +514,19 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
           </div>
         ) : (
           goals.map((goal, i) => (
-            <GoalItem key={goal.id} goal={goal} index={i} router={router} />
+            <GoalItem
+              key={goal.id}
+              goal={goal}
+              index={i}
+              onUpdate={handleUpdateGoal}
+              onDelete={handleDeleteGoal}
+              onCreateTask={handleCreateTask}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleDeleteTask}
+              onCreateSubTask={handleCreateSubTask}
+              onToggleSubTask={handleToggleSubTask}
+              onDeleteSubTask={handleDeleteSubTask}
+            />
           ))
         )}
       </div>
@@ -184,65 +534,49 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
   );
 }
 
-// --- Sub-components for cleaner structure ---
+// --- Sub-components ---
+
+interface GoalItemProps {
+  goal: GoalWithRelations;
+  index: number;
+  onUpdate: (id: string, title: string) => void;
+  onDelete: (id: string) => void;
+  onCreateTask: (goalId: string, title: string) => void;
+  onUpdateTask: (goalId: string, taskId: string, title: string) => void;
+  onDeleteTask: (goalId: string, taskId: string) => void;
+  onCreateSubTask: (goalId: string, taskId: string, title: string) => void;
+  onToggleSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+  onDeleteSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+}
 
 function GoalItem({
   goal,
   index,
-  router,
-}: {
-  goal: GoalWithRelations;
-  index: number;
-  router: AppRouter;
-}) {
+  onUpdate,
+  onDelete,
+  ...taskProps
+}: GoalItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(goal.title);
-  const [, startTransition] = useTransition();
 
   const handleUpdate = () => {
     if (!editTitle.trim()) return;
-    startTransition(async () => {
-      await updateGoal(goal.id, editTitle);
-      setIsEditing(false);
-      router.refresh();
-    });
+    onUpdate(goal.id, editTitle);
+    setIsEditing(false);
   };
 
   const handleDelete = () => {
     if (confirm("Delete this goal and all tasks?")) {
-      startTransition(async () => {
-        await deleteGoal(goal.id);
-        router.refresh();
-      });
+      onDelete(goal.id);
     }
   };
 
-  // Status Logic
   const getStatus = (p: number) => {
-    if (p === 100)
-      return {
-        label: "Completed",
-        color: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      };
-    if (p >= 66)
-      return {
-        label: "On Track",
-        color: "bg-blue-50 text-blue-700 border-blue-200",
-      };
-    if (p >= 33)
-      return {
-        label: "In Progress",
-        color: "bg-amber-50 text-amber-700 border-amber-200",
-      };
-    if (p > 0)
-      return {
-        label: "Started",
-        color: "bg-orange-50 text-orange-700 border-orange-200",
-      };
-    return {
-      label: "Not Started",
-      color: "bg-secondary text-muted-foreground border-border",
-    };
+    if (p === 100) return { label: "Completed", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+    if (p >= 66) return { label: "On Track", color: "bg-blue-50 text-blue-700 border-blue-200" };
+    if (p >= 33) return { label: "In Progress", color: "bg-amber-50 text-amber-700 border-amber-200" };
+    if (p > 0) return { label: "Started", color: "bg-orange-50 text-orange-700 border-orange-200" };
+    return { label: "Not Started", color: "bg-secondary text-muted-foreground border-border" };
   };
 
   const status = getStatus(goal.percentage);
@@ -269,24 +603,14 @@ function GoalItem({
                     <Button size="sm" onClick={handleUpdate}>
                       <Check className="w-4 h-4" />
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setIsEditing(false)}
-                    >
+                    <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ) : (
                   <CardTitle className="font-serif text-2xl text-foreground flex items-center gap-3">
                     {goal.title}
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "font-sans font-normal border ml-2",
-                        status.color
-                      )}
-                    >
+                    <Badge variant="outline" className={cn("font-sans font-normal border ml-2", status.color)}>
                       {status.label}
                     </Badge>
                   </CardTitle>
@@ -301,11 +625,7 @@ function GoalItem({
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground"
-                >
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -313,10 +633,7 @@ function GoalItem({
                 <DropdownMenuItem onClick={() => setIsEditing(true)}>
                   <Edit2 className="w-4 h-4 mr-2" /> Edit Title
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleDelete}
-                  className="text-destructive focus:text-destructive"
-                >
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
                   <Trash2 className="w-4 h-4 mr-2" /> Delete Goal
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -333,7 +650,7 @@ function GoalItem({
                 </span>
               </AccordionTrigger>
               <AccordionContent className="px-6 pb-6 pt-4 bg-card/50">
-                <TaskList goalId={goal.id} tasks={goal.tasks} router={router} />
+                <TaskList goalId={goal.id} tasks={goal.tasks} {...taskProps} />
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -343,54 +660,45 @@ function GoalItem({
   );
 }
 
-function TaskList({
-  goalId,
-  tasks,
-  router,
-}: {
+interface TaskListProps {
   goalId: string;
   tasks: TaskWithRelations[];
-  router: AppRouter;
-}) {
+  onCreateTask: (goalId: string, title: string) => void;
+  onUpdateTask: (goalId: string, taskId: string, title: string) => void;
+  onDeleteTask: (goalId: string, taskId: string) => void;
+  onCreateSubTask: (goalId: string, taskId: string, title: string) => void;
+  onToggleSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+  onDeleteSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+}
+
+function TaskList({ goalId, tasks, onCreateTask, ...itemProps }: TaskListProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
-  const [, startTransition] = useTransition();
 
-  const handleCreateTask = () => {
+  const handleCreate = () => {
     if (!newTaskTitle.trim()) return;
-    startTransition(async () => {
-      await createTask(goalId, newTaskTitle);
-      setNewTaskTitle("");
-      setIsAdding(false);
-      router.refresh();
-    });
+    onCreateTask(goalId, newTaskTitle);
+    setNewTaskTitle("");
+    setIsAdding(false);
   };
 
   return (
     <div className="space-y-4">
       {tasks.map((task) => (
-        <TaskItem key={task.id} task={task} router={router} />
+        <TaskItem key={task.id} goalId={goalId} task={task} {...itemProps} />
       ))}
       {isAdding ? (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex gap-2 items-center"
-        >
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 items-center">
           <Input
             placeholder="Phase title..."
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreateTask()}
+            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
             className="h-9"
             autoFocus
           />
-          <Button size="sm" onClick={handleCreateTask}>
-            Add
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>
-            Cancel
-          </Button>
+          <Button size="sm" onClick={handleCreate}>Add</Button>
+          <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>Cancel</Button>
         </motion.div>
       ) : (
         <Button
@@ -407,27 +715,30 @@ function TaskList({
   );
 }
 
-function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter }) {
+interface TaskItemProps {
+  goalId: string;
+  task: TaskWithRelations;
+  onUpdateTask: (goalId: string, taskId: string, title: string) => void;
+  onDeleteTask: (goalId: string, taskId: string) => void;
+  onCreateSubTask: (goalId: string, taskId: string, title: string) => void;
+  onToggleSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+  onDeleteSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+}
+
+function TaskItem({ goalId, task, onUpdateTask, onDeleteTask, ...subProps }: TaskItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
-  const [, startTransition] = useTransition();
 
   const handleUpdate = () => {
     if (!editTitle.trim()) return;
-    startTransition(async () => {
-      await updateTask(task.id, editTitle);
-      setIsEditing(false);
-      router.refresh();
-    });
+    onUpdateTask(goalId, task.id, editTitle);
+    setIsEditing(false);
   };
 
   const handleDelete = () => {
     if (confirm("Delete this phase?")) {
-      startTransition(async () => {
-        await deleteTask(task.id);
-        router.refresh();
-      });
+      onDeleteTask(goalId, task.id);
     }
   };
 
@@ -435,17 +746,12 @@ function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter
 
   return (
     <div className="border border-border/50 rounded-lg bg-background shadow-sm hover:shadow-md transition-all duration-200 group/task">
-      {/* Task Header Row */}
       <div className="flex items-center gap-3 p-3 rounded-md">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="p-1 hover:bg-secondary rounded text-muted-foreground transition-colors"
         >
-          {isOpen ? (
-            <ChevronDown className="w-4 h-4" />
-          ) : (
-            <ChevronRight className="w-4 h-4" />
-          )}
+          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         {isComplete ? (
           <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
@@ -467,12 +773,7 @@ function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter
             </div>
           ) : (
             <div className="flex items-center justify-between gap-4">
-              <span
-                className={cn(
-                  "font-medium text-sm sm:text-base truncate",
-                  isComplete && "text-muted-foreground line-through"
-                )}
-              >
+              <span className={cn("font-medium text-sm sm:text-base truncate", isComplete && "text-muted-foreground line-through")}>
                 {task.title}
               </span>
               <div className="flex items-center gap-3 opacity-0 group-hover/task:opacity-100 transition-opacity">
@@ -481,20 +782,10 @@ function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter
                     {task.percentage.toFixed(0)}%
                   </span>
                 )}
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-6 w-6"
-                  onClick={() => setIsEditing(true)}
-                >
+                <Button variant="ghost" size="icon-sm" className="h-6 w-6" onClick={() => setIsEditing(true)}>
                   <Edit2 className="w-3 h-3 text-muted-foreground" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="h-6 w-6 hover:text-destructive"
-                  onClick={handleDelete}
-                >
+                <Button variant="ghost" size="icon-sm" className="h-6 w-6 hover:text-destructive" onClick={handleDelete}>
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
@@ -503,7 +794,6 @@ function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter
         </div>
       </div>
 
-      {/* Subtasks Container */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -513,11 +803,7 @@ function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter
             className="overflow-hidden"
           >
             <div className="pl-12 pr-4 pb-4 pt-0">
-              <SubTaskList
-                taskId={task.id}
-                subtasks={task.subtasks}
-                router={router}
-              />
+              <SubTaskList goalId={goalId} taskId={task.id} subtasks={task.subtasks} {...subProps} />
             </div>
           </motion.div>
         )}
@@ -526,75 +812,44 @@ function TaskItem({ task, router }: { task: TaskWithRelations; router: AppRouter
   );
 }
 
-function SubTaskList({
-  taskId,
-  subtasks,
-  router,
-}: {
+interface SubTaskListProps {
+  goalId: string;
   taskId: string;
   subtasks: SubTaskWithRelations[];
-  router: AppRouter;
-}) {
+  onCreateSubTask: (goalId: string, taskId: string, title: string) => void;
+  onToggleSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+  onDeleteSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
+}
+
+function SubTaskList({ goalId, taskId, subtasks, onCreateSubTask, onToggleSubTask, onDeleteSubTask }: SubTaskListProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
-  const [, startTransition] = useTransition();
 
   const handleAdd = () => {
     if (!title.trim()) return;
-    startTransition(async () => {
-      await createSubTask(taskId, title);
-      setTitle("");
-      setIsAdding(false);
-      router.refresh();
-    });
-  };
-
-  const handleToggle = (subtaskId: string) => {
-    startTransition(async () => {
-      await toggleSubTask(subtaskId);
-      router.refresh();
-    });
-  };
-
-  const handleDelete = (subtaskId: string) => {
-    startTransition(async () => {
-      await deleteSubTask(subtaskId);
-      router.refresh();
-    });
+    onCreateSubTask(goalId, taskId, title);
+    setTitle("");
+    setIsAdding(false);
   };
 
   return (
     <div className="space-y-1 relative">
-      {/* Connector Line */}
       <div className="absolute left-[-19px] top-0 bottom-4 w-px bg-border/50" />
       {subtasks.map((st) => (
-        <div
-          key={st.id}
-          className="group/sub flex items-center gap-3 py-1.5 text-sm min-h-[32px]"
-        >
-          {/* Connector Dot */}
+        <div key={st.id} className="group/sub flex items-center gap-3 py-1.5 text-sm min-h-[32px]">
           <div className="absolute left-[-22px] w-1.5 h-1.5 rounded-full bg-border" />
           <button
-            onClick={() => handleToggle(st.id)}
+            onClick={() => onToggleSubTask(goalId, taskId, st.id)}
             className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
           >
-            {st.isComplete ? (
-              <CheckCircle2 className="w-4 h-4 text-primary" />
-            ) : (
-              <Circle className="w-4 h-4" />
-            )}
+            {st.isComplete ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Circle className="w-4 h-4" />}
           </button>
-          <span
-            className={cn(
-              "flex-1 truncate",
-              st.isComplete && "text-muted-foreground line-through"
-            )}
-          >
+          <span className={cn("flex-1 truncate", st.isComplete && "text-muted-foreground line-through")}>
             {st.title}
           </span>
           <button
-            onClick={() => handleDelete(st.id)}
-            className="opacity-0 group-hover/sub:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+             onClick={() => onDeleteSubTask(goalId, taskId, st.id)}
+             className="opacity-0 group-hover/sub:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
           >
             <X className="w-3 h-3" />
           </button>
@@ -610,9 +865,7 @@ function SubTaskList({
             className="h-8 text-sm"
             autoFocus
           />
-          <Button size="sm" className="h-8" onClick={handleAdd}>
-            Add
-          </Button>
+          <Button size="sm" className="h-8" onClick={handleAdd}>Add</Button>
         </div>
       ) : (
         <button
