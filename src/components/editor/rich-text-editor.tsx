@@ -144,8 +144,12 @@ export function RichTextEditor({
       {editable && (
         <BubbleMenu
           editor={editor} 
-          options={{ placement: 'top' }}
-          className="flex items-center gap-0.5 p-1 bg-background border border-border/60 rounded-xl shadow-xl shadow-black/10 backdrop-blur-sm"
+          options={{ 
+            placement: 'bottom',
+            offset: 15,
+            flip: true,
+          }}
+          className="flex items-center gap-0.5 p-1 bg-background border border-border/60 rounded-xl shadow-xl shadow-black/10 backdrop-blur-sm z-50 max-w-[calc(100vw-20px)]"
         >
           <BubbleButton
             onClick={() => editor.chain().focus().toggleBold().run()}
