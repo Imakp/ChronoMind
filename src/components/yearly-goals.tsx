@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -68,6 +68,10 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  useEffect(() => {
+    setGoals(initialGoals);
+  }, [initialGoals]);
 
   const handleCreateGoal = async () => {
     if (!newGoalTitle.trim()) {
