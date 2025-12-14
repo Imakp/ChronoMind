@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { signOut, useSession } from "next-auth/react";
 import { YearSwitcher } from "@/components/navigation/year-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useState, useEffect } from "react"; 
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -154,6 +154,17 @@ function SidebarContent({ year, userId, setMobileOpen }: SidebarContentProps) {
 
 export function AppShell({ children, year, userId }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [mobileOpen]);
 
   return (
     <div className="min-h-screen flex bg-background">
