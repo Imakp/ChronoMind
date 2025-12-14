@@ -5,6 +5,7 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import { HighlightWithTags } from "@/lib/tiptap-extensions/highlight-with-tags";
 import BubbleMenuExtension from "@tiptap/extension-bubble-menu";
+import Placeholder from "@tiptap/extension-placeholder";
 import { useEffect, useRef } from "react";
 import { HighlightMenu } from "./highlight-menu";
 import { useHighlightManager } from "@/hooks/use-highlight-manager";
@@ -31,7 +32,7 @@ interface RichTextEditorProps {
   entityType: string;
   entityId: string;
   userId: string;
-  highlights?: Highlight[]; // Accept highlights from parent
+  highlights?: Highlight[];
   variant?: "default" | "minimal" | "clean";
 }
 
@@ -68,10 +69,9 @@ export function RichTextEditor({
   entityType,
   entityId,
   userId,
-  highlights = [], // Default to empty array
+  highlights = [],
   variant = 'default'
 }: RichTextEditorProps) {
-  // Use a ref to track if initial content has been loaded
   const isLoaded = useRef(false);
 
   const editor = useEditor({
@@ -80,6 +80,10 @@ export function RichTextEditor({
         heading: {
           levels: [1, 2, 3],
         },
+      }),
+      Placeholder.configure({
+        placeholder: placeholder,
+        emptyEditorClass: 'is-editor-empty',
       }),
       HighlightWithTags.configure({
         multicolor: true,
@@ -100,12 +104,10 @@ export function RichTextEditor({
           "prose prose-sm max-w-none focus:outline-none px-3 sm:px-4 py-3",
           variant === 'minimal' ? "min-h-[300px] sm:prose-base prose-xl px-0 py-0" : "min-h-[200px]"
         ),
-        "data-placeholder": placeholder,
       },
     },
   });
 
-  // 1. Standard Manager (Creation & Interaction)
   const {
     menuState,
     updateSelectionState,
@@ -114,21 +116,15 @@ export function RichTextEditor({
     closeMenu,
   } = useHighlightManager(editor, { type: entityType, id: entityId }, userId);
 
-  // 2. NEW: Persistence Manager (Restoration)
-  // This ensures that even if JSON is stale, DB highlights are painted on mount.
   useHighlightPersistence(editor, highlights);
 
-  // FIX: Prevent content reversion
-  // Only update editor content on initial load, not on every content prop change
   useEffect(() => {
     if (editor && content && !isLoaded.current) {
-      // Initial load
       editor.commands.setContent(content);
       isLoaded.current = true;
     }
   }, [editor, content]);
 
-  // Reset loaded state when switching entities
   useEffect(() => {
     isLoaded.current = false;
   }, [entityId]);
@@ -145,9 +141,6 @@ export function RichTextEditor({
         variant === 'minimal' && "border-none bg-transparent shadow-none"
       )}
     >
-      {/* 1. FLOATING BUBBLE MENU 
-        Only shows when text is selected and editor is editable 
-      */}
       {editable && (
         <BubbleMenu
           editor={editor} 
@@ -207,9 +200,10 @@ export function RichTextEditor({
           </BubbleButton>
         </BubbleMenu>
       )}
+      
       {editable && variant !== 'minimal' && (
         <div className="flex items-center flex-wrap gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-          <Button
+           <Button
             onClick={() => editor.chain().focus().toggleBold().run()}
             variant={editor.isActive("bold") ? "default" : "outline"}
             size="sm"
@@ -228,12 +222,8 @@ export function RichTextEditor({
             <Italic className="w-4 h-4" />
           </Button>
           <Button
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
-            }
-            variant={
-              editor.isActive("heading", { level: 2 }) ? "default" : "outline"
-            }
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            variant={editor.isActive("heading", { level: 2 }) ? "default" : "outline"}
             size="sm"
             className="h-8 w-8 p-0"
             title="Heading"
@@ -272,9 +262,6 @@ export function RichTextEditor({
           </Button>
         </div>
       )}
-
-      {/* Floating Toolbar for Minimal Variant - Optional future enhancement, for now just no toolbar implies pure writing flow */}
-      {/* If minimal, we can maybe show a bubble menu, but for now let's keep it simple as requested: just the editor */}
 
       <div onMouseUp={updateSelectionState} onKeyUp={updateSelectionState}>
         <EditorContent editor={editor} />
