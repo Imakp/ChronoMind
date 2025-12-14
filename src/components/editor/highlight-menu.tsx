@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { createPortal } from "react-dom"; 
 import { X, Plus, Tag as TagIcon, Check, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getTags } from "@/lib/actions";
+import { getTags } from "@/lib/actions"; 
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -14,7 +13,7 @@ interface HighlightMenuProps {
   existingTags?: string[];
   onTagsAssign: (tags: string[]) => void;
   onClose: () => void;
-  userId: string;
+  userId: string; 
 }
 
 export function HighlightMenu({
@@ -29,17 +28,11 @@ export function HighlightMenu({
   const [inputValue, setInputValue] = useState("");
   const [availableTags, setAvailableTags] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const [mounted, setMounted] = useState(false);   
+  const [selectedIndex, setSelectedIndex] = useState(0); 
 
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
 
   useEffect(() => {
     const fetchTags = async () => {
@@ -54,17 +47,15 @@ export function HighlightMenu({
   }, [userId]);
 
   useEffect(() => {
-    if (mounted) {
-        setTimeout(() => inputRef.current?.focus(), 50);
-    }
+    inputRef.current?.focus();
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
-    document.addEventListener("mousedown", handleClickOutside, true);
-    return () => document.removeEventListener("mousedown", handleClickOutside, true);
-  }, [onClose, mounted]);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [onClose]);
 
   useEffect(() => {
     if (!menuRef.current) return;
@@ -82,22 +73,21 @@ export function HighlightMenu({
     if (newLeft < 0) newLeft = 20;
 
     if (newTop + rect.height > viewportHeight) {
-      newTop = position.y - rect.height - 40;
+      newTop = position.y - rect.height - 40; 
     }
 
     menu.style.left = `${newLeft}px`;
     menu.style.top = `${newTop}px`;
-  }, [position, availableTags]);
+  }, [position, availableTags]); 
 
   const filteredSuggestions = useMemo(() => {
     const lowerInput = inputValue.toLowerCase().trim();
     const unselected = availableTags.filter((t) => !tags.includes(t.name));
     
-    if (!lowerInput) return unselected.slice(0, 5);
+    if (!lowerInput) return unselected.slice(0, 5); 
 
     return unselected.filter((t) => t.name.toLowerCase().includes(lowerInput));
   }, [availableTags, inputValue, tags]);
-
   const addTag = (tagName: string) => {
     const trimmed = tagName.trim();
     if (trimmed && !tags.includes(trimmed)) {
@@ -147,16 +137,14 @@ export function HighlightMenu({
     onClose();
   };
 
-  if (!mounted) return null;
-
-  return createPortal(
+  return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       ref={menuRef}
-      className="fixed z-[9999] bg-background/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl w-[320px] max-w-[95vw] flex flex-col overflow-hidden ring-1 ring-black/5"
-      style={{ left: 0, top: 0 }}
+      className="absolute z-50 bg-background/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl w-[320px] max-w-[95vw] flex flex-col overflow-hidden ring-1 ring-black/5"
+      style={{ left: 0, top: 0 }} 
     >
       <div className="p-3 border-b border-border/50 bg-secondary/10">
         <div className="flex items-center justify-between mb-2">
@@ -197,7 +185,7 @@ export function HighlightMenu({
                value={inputValue}
                onChange={(e) => {
                   setInputValue(e.target.value);
-                  setSelectedIndex(0);
+                  setSelectedIndex(0); 
                }}
                onKeyDown={handleKeyDown}
                placeholder={tags.length === 0 ? "Search or create tag..." : "Add another..."}
@@ -264,8 +252,7 @@ export function HighlightMenu({
             Save Highlight
          </Button>
       </div>
-    </motion.div>,
-    document.body
+    </motion.div>
   );
 }
 
