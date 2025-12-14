@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom"; 
 import { X, Plus, Tag as TagIcon, Check, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getTags } from "@/lib/actions"; // We'll use this to fetch tags
+import { getTags } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 
@@ -13,7 +14,7 @@ interface HighlightMenuProps {
   existingTags?: string[];
   onTagsAssign: (tags: string[]) => void;
   onClose: () => void;
-  userId: string; // Required for fetching
+  userId: string;
 }
 
 export function HighlightMenu({
@@ -24,19 +25,22 @@ export function HighlightMenu({
   onClose,
   userId,
 }: HighlightMenuProps) {
-  // State
   const [tags, setTags] = useState<string[]>(existingTags);
   const [inputValue, setInputValue] = useState("");
   const [availableTags, setAvailableTags] = useState<{ id: string; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedIndex, setSelectedIndex] = useState(0); // For keyboard nav
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);   
 
-  // Refs
   const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // 1. Fetch Tags on Mount
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   useEffect(() => {
     const fetchTags = async () => {
       setIsLoading(true);
@@ -49,19 +53,19 @@ export function HighlightMenu({
     fetchTags();
   }, [userId]);
 
-  // 2. Click Outside & Esc
   useEffect(() => {
-    inputRef.current?.focus();
+    if (mounted) {
+        setTimeout(() => inputRef.current?.focus(), 50);
+    }
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+    document.addEventListener("mousedown", handleClickOutside, true);
+    return () => document.removeEventListener("mousedown", handleClickOutside, true);
+  }, [onClose, mounted]);
 
-  // 3. Smart Positioning
   useEffect(() => {
     if (!menuRef.current) return;
     const menu = menuRef.current;
@@ -77,27 +81,23 @@ export function HighlightMenu({
     }
     if (newLeft < 0) newLeft = 20;
 
-    // Flip to top if close to bottom
     if (newTop + rect.height > viewportHeight) {
-      newTop = position.y - rect.height - 40; // Position above selection
+      newTop = position.y - rect.height - 40;
     }
 
     menu.style.left = `${newLeft}px`;
     menu.style.top = `${newTop}px`;
-  }, [position, availableTags]); // Re-calc when height changes due to list
+  }, [position, availableTags]);
 
-  // 4. Filtering Logic
   const filteredSuggestions = useMemo(() => {
     const lowerInput = inputValue.toLowerCase().trim();
-    // Filter out tags already added
     const unselected = availableTags.filter((t) => !tags.includes(t.name));
     
-    if (!lowerInput) return unselected.slice(0, 5); // Show recent/top 5 empty
+    if (!lowerInput) return unselected.slice(0, 5);
 
     return unselected.filter((t) => t.name.toLowerCase().includes(lowerInput));
   }, [availableTags, inputValue, tags]);
 
-  // 5. Actions
   const addTag = (tagName: string) => {
     const trimmed = tagName.trim();
     if (trimmed && !tags.includes(trimmed)) {
@@ -113,18 +113,14 @@ export function HighlightMenu({
     inputRef.current?.focus();
   };
 
-  // 6. Keyboard Navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
       if (filteredSuggestions.length > 0 && selectedIndex >= 0) {
-        // Select from dropdown
         addTag(filteredSuggestions[selectedIndex].name);
       } else if (inputValue.trim()) {
-        // Create new
         addTag(inputValue);
       } else {
-        // Save if empty input
         handleSave();
       }
     } else if (e.key === "ArrowDown") {
@@ -138,7 +134,6 @@ export function HighlightMenu({
         prev > 0 ? prev - 1 : filteredSuggestions.length - 1
       );
     } else if (e.key === "Backspace" && !inputValue && tags.length > 0) {
-      // Remove last tag if input is empty
       removeTag(tags[tags.length - 1]);
     } else if (e.key === "Escape") {
       onClose();
@@ -152,16 +147,17 @@ export function HighlightMenu({
     onClose();
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <motion.div
       initial={{ opacity: 0, scale: 0.95, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       ref={menuRef}
-      className="absolute z-[9999] bg-background/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl w-[320px] max-w-[95vw] flex flex-col overflow-hidden ring-1 ring-black/5"
-      style={{ left: 0, top: 0 }} // Positioned by effect
+      className="fixed z-[9999] bg-background/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl w-[320px] max-w-[95vw] flex flex-col overflow-hidden ring-1 ring-black/5"
+      style={{ left: 0, top: 0 }}
     >
-      {/* Header with Selection Preview */}
       <div className="p-3 border-b border-border/50 bg-secondary/10">
         <div className="flex items-center justify-between mb-2">
            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
@@ -177,9 +173,7 @@ export function HighlightMenu({
         </p>
       </div>
 
-      {/* Tag Input Area */}
       <div className="p-3 space-y-3">
-         {/* Active Tags Chips */}
          {tags.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
                {tags.map((tag) => (
@@ -196,7 +190,6 @@ export function HighlightMenu({
             </div>
          )}
 
-         {/* Input Field */}
          <div className="relative">
             <Search className="absolute left-2.5 top-2.5 w-4 h-4 text-muted-foreground/50" />
             <input
@@ -204,7 +197,7 @@ export function HighlightMenu({
                value={inputValue}
                onChange={(e) => {
                   setInputValue(e.target.value);
-                  setSelectedIndex(0); // Reset selection on type
+                  setSelectedIndex(0);
                }}
                onKeyDown={handleKeyDown}
                placeholder={tags.length === 0 ? "Search or create tag..." : "Add another..."}
@@ -213,7 +206,6 @@ export function HighlightMenu({
          </div>
       </div>
 
-      {/* Suggestions Dropdown */}
       <div className="max-h-[200px] overflow-y-auto border-t border-border/50 scrollbar-thin scrollbar-thumb-secondary">
          {isLoading ? (
             <div className="p-4 flex items-center justify-center text-xs text-muted-foreground gap-2">
@@ -221,7 +213,6 @@ export function HighlightMenu({
             </div>
          ) : (
             <div className="p-1.5 space-y-0.5" ref={listRef}>
-               {/* 1. Exact Match / Create Option */}
                {inputValue && !availableTags.some(t => t.name.toLowerCase() === inputValue.toLowerCase()) && !tags.includes(inputValue) && (
                   <button
                      onClick={() => addTag(inputValue)}
@@ -237,7 +228,6 @@ export function HighlightMenu({
                   </button>
                )}
 
-               {/* 2. Existing Suggestions */}
                {filteredSuggestions.map((tag, i) => (
                   <button
                      key={tag.id}
@@ -265,7 +255,6 @@ export function HighlightMenu({
          )}
       </div>
 
-      {/* Footer */}
       <div className="p-3 bg-secondary/20 border-t border-border/50 flex justify-end gap-2">
          <Button size="sm" variant="ghost" onClick={onClose} className="h-8 text-xs">
             Cancel
@@ -275,11 +264,11 @@ export function HighlightMenu({
             Save Highlight
          </Button>
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
-// Simple Hash Icon component for the list
 function HashIcon({ className }: { className?: string }) {
    return (
       <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
