@@ -158,7 +158,7 @@ export function HighlightMenu({
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       ref={menuRef}
-      className="absolute z-50 bg-background/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl w-[320px] max-w-[95vw] flex flex-col overflow-hidden ring-1 ring-black/5"
+      className="absolute z-[9999] bg-background/95 backdrop-blur-md border border-border/50 rounded-xl shadow-2xl w-[320px] max-w-[95vw] flex flex-col overflow-hidden ring-1 ring-black/5"
       style={{ left: 0, top: 0 }} // Positioned by effect
     >
       {/* Header with Selection Preview */}
