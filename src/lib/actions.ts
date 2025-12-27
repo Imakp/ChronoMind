@@ -40,7 +40,7 @@ import {
   sanitizeTiptapContent,
 } from "./validations";
 import { handleActionError } from "./error-handler";
-import { hasSubstantialContent } from "./content-utils";
+import { hasSubstantialContent, extractPreviewText } from "./content-utils";
 // ... (rest of imports)
 
 // Type definition for Highlight with all possible relations
@@ -903,10 +903,14 @@ export async function createLesson(
       ? sanitizeTiptapContent(validated.content)
       : undefined;
 
+    // Generate preview using content utilities
+    const preview = extractPreviewText(sanitizedContent as TiptapContent);
+
     const lesson = await db.lesson.create({
       data: {
         title: validated.title,
         content: sanitizedContent as Prisma.InputJsonValue,
+        preview: preview,
         yearId: validated.yearId,
       },
       include: {
@@ -937,11 +941,15 @@ export async function updateLesson(
     const validated = updateLessonSchema.parse({ lessonId, title, content });
     const sanitizedContent = sanitizeTiptapContent(validated.content);
 
+    // Generate preview using content utilities
+    const preview = extractPreviewText(sanitizedContent as TiptapContent);
+
     const lesson = await db.lesson.update({
       where: { id: validated.lessonId },
       data: {
         title: validated.title,
         content: sanitizedContent as Prisma.InputJsonValue,
+        preview: preview,
       },
       include: { year: true },
     });
@@ -997,6 +1005,60 @@ export async function getLessons(yearId: string) {
   }
 }
 
+export async function getLessonsList(yearId: string) {
+  try {
+    if (!yearId) {
+      return { success: false, error: "Year ID is required" };
+    }
+
+    const lessons = await db.lesson.findMany({
+      where: { yearId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        yearId: true,
+        preview: true,
+        highlights: {
+          include: {
+            tags: true,
+          },
+        },
+        // Explicitly exclude content field for performance optimization
+      },
+    });
+
+    return { success: true, data: lessons };
+  } catch (error) {
+    return handleActionError(error);
+  }
+}
+
+export async function getLessonDetail(lessonId: string) {
+  try {
+    const lesson = await db.lesson.findUnique({
+      where: { id: lessonId },
+      include: {
+        highlights: {
+          include: {
+            tags: true,
+          },
+        },
+      },
+    });
+
+    if (!lesson) {
+      return { success: false, error: "Lesson not found" };
+    }
+
+    return { success: true, data: lesson };
+  } catch (error) {
+    console.error("Error fetching lesson detail:", error);
+    return { success: false, error: "Failed to fetch lesson detail" };
+  }
+}
+
 // Creative Dump Actions
 export async function createCreativeNote(
   yearId: string,
@@ -1009,9 +1071,13 @@ export async function createCreativeNote(
       ? sanitizeTiptapContent(validated.content)
       : undefined;
 
+    // Generate preview using content utilities
+    const preview = extractPreviewText(sanitizedContent as TiptapContent);
+
     const note = await db.creativeNote.create({
       data: {
         content: sanitizedContent as Prisma.InputJsonValue,
+        preview: preview,
         yearId: validated.yearId,
       },
       include: {
@@ -1041,9 +1107,15 @@ export async function updateCreativeNote(
     const validated = updateCreativeNoteSchema.parse({ noteId, content });
     const sanitizedContent = sanitizeTiptapContent(validated.content);
 
+    // Generate preview using content utilities
+    const preview = extractPreviewText(sanitizedContent as TiptapContent);
+
     const note = await db.creativeNote.update({
       where: { id: validated.noteId },
-      data: { content: sanitizedContent as Prisma.InputJsonValue },
+      data: {
+        content: sanitizedContent as Prisma.InputJsonValue,
+        preview: preview,
+      },
       include: { year: true },
     });
 
@@ -1089,6 +1161,56 @@ export async function getCreativeNotes(yearId: string) {
   } catch (error) {
     console.error("Error fetching creative notes:", error);
     return { success: false, error: "Failed to fetch creative notes" };
+  }
+}
+
+export async function getCreativeNotesList(yearId: string) {
+  try {
+    const notes = await db.creativeNote.findMany({
+      where: { yearId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        createdAt: true,
+        yearId: true,
+        preview: true,
+        highlights: {
+          include: {
+            tags: true,
+          },
+        },
+        // Explicitly exclude content field for performance optimization
+      },
+    });
+
+    return { success: true, data: notes };
+  } catch (error) {
+    console.error("Error fetching creative notes list:", error);
+    return { success: false, error: "Failed to fetch creative notes list" };
+  }
+}
+
+export async function getCreativeNoteDetail(noteId: string) {
+  try {
+    const note = await db.creativeNote.findUnique({
+      where: { id: noteId },
+      include: {
+        highlights: {
+          include: {
+            tags: true,
+          },
+        },
+      },
+    });
+
+    if (!note) {
+      return { success: false, error: "Creative note not found" };
+    }
+
+    return { success: true, data: note };
+  } catch (error) {
+    console.error("Error fetching creative note detail:", error);
+    return { success: false, error: "Failed to fetch creative note detail" };
   }
 }
 

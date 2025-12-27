@@ -35,6 +35,23 @@ export type DailyLogMetadata = {
   highlights: Highlight[];
 };
 
+export type CreativeNoteMetadata = {
+  id: string;
+  createdAt: Date;
+  yearId: string;
+  preview: string | null;
+  highlights: Highlight[];
+};
+
+export type LessonMetadata = {
+  id: string;
+  title: string;
+  createdAt: Date;
+  yearId: string;
+  preview: string | null;
+  highlights: Highlight[];
+};
+
 export type YearWithRelations = Year & {
   dailyLogs: DailyLog[];
   quarterlyReflections: QuarterlyReflection[];
