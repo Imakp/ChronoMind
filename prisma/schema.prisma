@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -17,14 +14,13 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
-  password      String?   // For email/password authentication
+  password      String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
-  accounts Account[]
-  sessions Session[]
-  years    Year[]
-  tags     Tag[]
+  accounts      Account[]
+  sessions      Session[]
+  years         Year[]
+  tags          Tag[]
 }
 
 model Account {
@@ -39,11 +35,9 @@ model Account {
   scope             String?
   id_token          String?
   session_state     String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([provider, providerAccountId])
 }
@@ -52,10 +46,9 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -67,11 +60,10 @@ model VerificationToken {
 }
 
 model Year {
-  id     String @id @default(cuid())
-  year   Int
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
+  id                   String                @id @default(cuid())
+  year                 Int
+  userId               String
+  user                 User                  @relation(fields: [userId], references: [id])
   dailyLogs            DailyLog[]
   quarterlyReflections QuarterlyReflection[]
   goals                Goal[]
@@ -85,26 +77,26 @@ model Year {
 }
 
 model DailyLog {
-  id      String    @id @default(cuid())
-  date    DateTime
-  content Json?
-  yearId  String
-  year    Year      @relation(fields: [yearId], references: [id])
-
+  id         String      @id @default(cuid())
+  date       DateTime
+  content    Json?
+  hasContent Boolean     @default(false)
+  yearId     String
+  year       Year        @relation(fields: [yearId], references: [id])
   highlights Highlight[]
 
   @@unique([yearId, date])
   @@index([yearId])
   @@index([date])
+  @@index([hasContent])
 }
 
 model QuarterlyReflection {
-  id      String @id @default(cuid())
-  quarter Int    // 1, 2, 3, or 4
-  content Json?
-  yearId  String
-  year    Year   @relation(fields: [yearId], references: [id])
-
+  id         String      @id @default(cuid())
+  quarter    Int
+  content    Json?
+  yearId     String
+  year       Year        @relation(fields: [yearId], references: [id])
   highlights Highlight[]
 
   @@unique([yearId, quarter])
@@ -112,40 +104,37 @@ model QuarterlyReflection {
 }
 
 model Goal {
-  id          String  @id @default(cuid())
+  id          String      @id @default(cuid())
   title       String
-  description Json?   // Tiptap content for detailed goal notes
-  percentage  Float   @default(0)
+  description Json?
+  percentage  Float       @default(0)
   yearId      String
-  year        Year    @relation(fields: [yearId], references: [id])
-
-  tasks      Task[]
-  highlights Highlight[]
+  year        Year        @relation(fields: [yearId], references: [id])
+  tasks       Task[]
+  highlights  Highlight[]
 
   @@index([yearId])
 }
 
 model Task {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   title       String
-  description Json?     // Tiptap content for detailed task notes
-  percentage  Float     @default(0)
+  description Json?
+  percentage  Float       @default(0)
   goalId      String
-  goal        Goal      @relation(fields: [goalId], references: [id])
-
-  subtasks   SubTask[]
-  highlights Highlight[]
+  goal        Goal        @relation(fields: [goalId], references: [id])
+  subtasks    SubTask[]
+  highlights  Highlight[]
 
   @@index([goalId])
 }
 
 model SubTask {
-  id         String  @id @default(cuid())
+  id         String      @id @default(cuid())
   title      String
-  isComplete Boolean @default(false)
+  isComplete Boolean     @default(false)
   taskId     String
-  task       Task    @relation(fields: [taskId], references: [id])
-
+  task       Task        @relation(fields: [taskId], references: [id])
   highlights Highlight[]
 
   @@index([taskId])
@@ -156,43 +145,40 @@ model Genre {
   name   String
   yearId String
   year   Year   @relation(fields: [yearId], references: [id])
-
   books  Book[]
 
   @@index([yearId])
 }
 
 model Book {
-  id      String @id @default(cuid())
-  title   String
-  genreId String
-  genre   Genre  @relation(fields: [genreId], references: [id])
-
+  id       String    @id @default(cuid())
+  title    String
+  genreId  String
+  genre    Genre     @relation(fields: [genreId], references: [id])
   chapters Chapter[]
 
   @@index([genreId])
 }
 
 model Chapter {
-  id      String @id @default(cuid())
-  title   String
-  content Json?
-  bookId  String
-  book    Book   @relation(fields: [bookId], references: [id])
-
+  id         String      @id @default(cuid())
+  title      String
+  content    Json?
+  bookId     String
+  book       Book        @relation(fields: [bookId], references: [id])
   highlights Highlight[]
 
   @@index([bookId])
 }
 
 model Lesson {
-  id        String   @id @default(cuid())
-  title     String
-  content   Json?
-  createdAt DateTime @default(now())
-  yearId    String
-  year      Year     @relation(fields: [yearId], references: [id])
-
+  id         String      @id @default(cuid())
+  title      String
+  content    Json?
+  preview    String?     @default("")
+  createdAt  DateTime    @default(now())
+  yearId     String
+  year       Year        @relation(fields: [yearId], references: [id])
   highlights Highlight[]
 
   @@index([yearId])
@@ -200,12 +186,12 @@ model Lesson {
 }
 
 model CreativeNote {
-  id        String   @id @default(cuid())
-  content   Json?
-  createdAt DateTime @default(now())
-  yearId    String
-  year      Year     @relation(fields: [yearId], references: [id])
-
+  id         String      @id @default(cuid())
+  content    Json?
+  preview    String?     @default("")
+  createdAt  DateTime    @default(now())
+  yearId     String
+  year       Year        @relation(fields: [yearId], references: [id])
   highlights Highlight[]
 
   @@index([yearId])
@@ -213,11 +199,10 @@ model CreativeNote {
 }
 
 model Tag {
-  id     String @id @default(cuid())
-  name   String
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
-
+  id         String      @id @default(cuid())
+  name       String
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
   highlights Highlight[]
 
   @@unique([userId, name])
@@ -226,32 +211,29 @@ model Tag {
 }
 
 model Highlight {
-  id          String @id @default(cuid())
-  tiptapId    String @unique
-  text        String
-  startOffset Int
-  endOffset   Int
-  createdAt   DateTime @default(now())
-
-  // Polymorphic relations to different content types
+  id                    String               @id @default(cuid())
+  tiptapId              String               @unique
+  text                  String
+  startOffset           Int
+  endOffset             Int
+  createdAt             DateTime             @default(now())
   dailyLogId            String?
-  dailyLog              DailyLog?            @relation(fields: [dailyLogId], references: [id])
   quarterlyReflectionId String?
-  quarterlyReflection   QuarterlyReflection? @relation(fields: [quarterlyReflectionId], references: [id])
   goalId                String?
-  goal                  Goal?                @relation(fields: [goalId], references: [id])
   taskId                String?
-  task                  Task?                @relation(fields: [taskId], references: [id])
   subtaskId             String?
-  subtask               SubTask?             @relation(fields: [subtaskId], references: [id])
   chapterId             String?
-  chapter               Chapter?             @relation(fields: [chapterId], references: [id])
   lessonId              String?
-  lesson                Lesson?              @relation(fields: [lessonId], references: [id])
   creativeNoteId        String?
+  dailyLog              DailyLog?            @relation(fields: [dailyLogId], references: [id])
+  quarterlyReflection   QuarterlyReflection? @relation(fields: [quarterlyReflectionId], references: [id])
+  goal                  Goal?                @relation(fields: [goalId], references: [id])
+  task                  Task?                @relation(fields: [taskId], references: [id])
+  subtask               SubTask?             @relation(fields: [subtaskId], references: [id])
+  chapter               Chapter?             @relation(fields: [chapterId], references: [id])
+  lesson                Lesson?              @relation(fields: [lessonId], references: [id])
   creativeNote          CreativeNote?        @relation(fields: [creativeNoteId], references: [id])
-
-  tags Tag[]
+  tags                  Tag[]
 
   @@index([dailyLogId])
   @@index([quarterlyReflectionId])
@@ -262,4 +244,13 @@ model Highlight {
   @@index([lessonId])
   @@index([creativeNoteId])
   @@index([createdAt])
+}
+
+model HighlightToTag {
+  A String
+  B String
+
+  @@id([A, B], map: "_HighlightToTag_AB_pkey")
+  @@index([B], map: "_HighlightToTag_B_index")
+  @@map("_HighlightToTag")
 }

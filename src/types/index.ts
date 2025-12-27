@@ -26,6 +26,15 @@ export type DailyLogWithRelations = DailyLog & {
   highlights: Highlight[];
 };
 
+// Metadata-only types for performance optimization
+export type DailyLogMetadata = {
+  id: string;
+  date: Date;
+  yearId: string;
+  hasContent: boolean;
+  highlights: Highlight[];
+};
+
 export type YearWithRelations = Year & {
   dailyLogs: DailyLog[];
   quarterlyReflections: QuarterlyReflection[];

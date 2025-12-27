@@ -2,11 +2,14 @@ import { Suspense } from "react";
 import { DailyLogs } from "@/components/daily-logs";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { getUserYears, getDailyLogsList, getOrCreateDailyLog } from "@/lib/actions";
-
+import {
+  getUserYears,
+  getDailyLogsList,
+  getOrCreateDailyLog,
+} from "@/lib/actions";
 
 import { Loader2 } from "lucide-react";
-import type { DailyLog } from "@prisma/client";
+import type { DailyLogMetadata } from "@/types";
 
 interface DailyLogsPageProps {
   params: Promise<{
@@ -29,24 +32,26 @@ export default async function DailyLogsPage({ params }: DailyLogsPageProps) {
   const today = new Date();
   const [logsResult, todayLogResult] = await Promise.all([
     getDailyLogsList(userYear.id),
-    getOrCreateDailyLog(userYear.id, today)
+    getOrCreateDailyLog(userYear.id, today),
   ]);
 
-  const initialLogs = logsResult.success && logsResult.data ? logsResult.data : [];
-  const todayLog = todayLogResult.success && todayLogResult.data ? todayLogResult.data : null;
+  const initialLogs =
+    logsResult.success && logsResult.data ? logsResult.data : [];
+  const todayLog =
+    todayLogResult.success && todayLogResult.data ? todayLogResult.data : null;
 
   return (
-    <Suspense 
+    <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       }
     >
-      <DailyLogs 
-        yearId={userYear.id} 
-        year={userYear.year} 
-        initialLogs={initialLogs as unknown as DailyLog[]} // Cast because list logs might miss content, but component expects DailyLog[]
+      <DailyLogs
+        yearId={userYear.id}
+        year={userYear.year}
+        initialLogs={initialLogs as DailyLogMetadata[]}
         todayLog={todayLog}
       />
     </Suspense>

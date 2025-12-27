@@ -2,7 +2,7 @@
 
 import { db } from "./db";
 import { revalidatePath } from "next/cache";
-import type { 
+import type {
   Prisma,
   Highlight,
   Tag,
@@ -16,7 +16,7 @@ import type {
   Genre,
   Lesson,
   CreativeNote,
-  Year
+  Year,
 } from "@prisma/client";
 import {
   createYearSchema,
@@ -40,6 +40,7 @@ import {
   sanitizeTiptapContent,
 } from "./validations";
 import { handleActionError } from "./error-handler";
+import { hasSubstantialContent } from "./content-utils";
 // ... (rest of imports)
 
 // Type definition for Highlight with all possible relations
@@ -50,16 +51,15 @@ type HighlightWithRelations = Highlight & {
   goal?: (Goal & { year: Year }) | null;
   task?: (Task & { goal: Goal & { year: Year } }) | null;
   subtask?: (SubTask & { task: Task & { goal: Goal & { year: Year } } }) | null;
-  chapter?: (Chapter & { book: Book & { genre: Genre & { year: Year } } }) | null;
+  chapter?:
+    | (Chapter & { book: Book & { genre: Genre & { year: Year } } })
+    | null;
   lesson?: (Lesson & { year: Year }) | null;
   creativeNote?: (CreativeNote & { year: Year }) | null;
 };
 
-
-
 // Types for Tiptap content
 import type { TiptapContent } from "@/types";
-
 
 // Year Management Actions
 export async function createYear(userId: string, year: number) {
@@ -191,9 +191,17 @@ export async function updateDailyLog(logId: string, content: TiptapContent) {
     const validated = updateDailyLogSchema.parse({ logId, content });
     const sanitizedContent = sanitizeTiptapContent(validated.content);
 
+    // Calculate hasContent flag using utility function
+    const contentHasSubstance = hasSubstantialContent(
+      sanitizedContent as TiptapContent
+    );
+
     const updatedLog = await db.dailyLog.update({
       where: { id: validated.logId },
-      data: { content: sanitizedContent as Prisma.InputJsonValue },
+      data: {
+        content: sanitizedContent as Prisma.InputJsonValue,
+        hasContent: contentHasSubstance,
+      },
     });
 
     revalidatePath(`/year/${updatedLog.yearId}/daily-logs`);
@@ -225,8 +233,6 @@ export async function getDailyLogs(yearId: string) {
   }
 }
 
-
-
 export async function getDailyLogsList(yearId: string) {
   try {
     const logs = await db.dailyLog.findMany({
@@ -236,35 +242,44 @@ export async function getDailyLogsList(yearId: string) {
         id: true,
         date: true,
         yearId: true,
+        hasContent: true,
         highlights: {
           include: {
-            tags: true
-          }
+            tags: true,
+          },
         },
-        content: true, // Included but we rely on the component handling it or we check it. 
-        // Actually, for list, we just wanted to avoid huge content. 
-        // But since we need 'hasContent' check, we sort of need it or a flag.
-        // Let's rely on the fact that Prisma "content" field is JSON.
-        // If we want to optimize, we would need to not select it. 
-        // But `DailyLogs` component logic relies on `content` existence.
-        // Let's include it for now to avoid logic breakage, users "Heavy Payload" claim might be about ALL logs at once.
-        // `findMany` here fetches ALL logs.
-        // If we select `content`, we are still fetching all Tiptap JSON.
-        // We MUST NOT select content if we want to solve the performance issue.
-        // I will omit `content` and accept that the `hasContent` function in frontend needs an update.
-        // Wait, I can't "omit" in the select unless I select everything else manually.
-        // I am selecting manually.
-        // I will NOT select content.
-        // And I will update `DailyLogs` to handle missing content gracefully (treating it as empty).
-      }
+        // Explicitly exclude content field for performance optimization
+      },
     });
-    
-    // We map to match local type expectations, but content will be missing (undefined).
-    // The client component checking `log.content` will get undefined.
+
     return { success: true, data: logs };
   } catch (error) {
     console.error("Error fetching daily logs list:", error);
     return { success: false, error: "Failed to fetch daily logs list" };
+  }
+}
+
+export async function getDailyLogDetail(logId: string) {
+  try {
+    const log = await db.dailyLog.findUnique({
+      where: { id: logId },
+      include: {
+        highlights: {
+          include: {
+            tags: true,
+          },
+        },
+      },
+    });
+
+    if (!log) {
+      return { success: false, error: "Daily log not found" };
+    }
+
+    return { success: true, data: log };
+  } catch (error) {
+    console.error("Error fetching daily log detail:", error);
+    return { success: false, error: "Failed to fetch daily log detail" };
   }
 }
 
@@ -396,7 +411,7 @@ export async function createTask(
     // For now, we'll try to find the goal to get the yearId.
     const goal = await db.goal.findUnique({ where: { id: validated.goalId } });
     if (goal) {
-       revalidatePath(`/year/${goal.yearId}/yearly-goals`);
+      revalidatePath(`/year/${goal.yearId}/yearly-goals`);
     }
     return { success: true, data: task };
   } catch (error) {
@@ -545,7 +560,7 @@ export async function updateTask(taskId: string, title: string) {
     // For now, we'll try to find the goal to get the yearId.
     const goal = await db.goal.findUnique({ where: { id: task.goalId } });
     if (goal) {
-       revalidatePath(`/year/${goal.yearId}/yearly-goals`);
+      revalidatePath(`/year/${goal.yearId}/yearly-goals`);
     }
     return { success: true, data: task };
   } catch (error) {
@@ -1185,10 +1200,16 @@ export async function createHighlight(
         include.task = { include: { goal: { include: { year: true } } } };
         break;
       case "subtask":
-        include.subtask = { include: { task: { include: { goal: { include: { year: true } } } } } };
+        include.subtask = {
+          include: { task: { include: { goal: { include: { year: true } } } } },
+        };
         break;
       case "chapter":
-        include.chapter = { include: { book: { include: { genre: { include: { year: true } } } } } };
+        include.chapter = {
+          include: {
+            book: { include: { genre: { include: { year: true } } } },
+          },
+        };
         break;
       case "lesson":
         include.lesson = { include: { year: true } };
@@ -1207,7 +1228,8 @@ export async function createHighlight(
       let yearNumber: number | undefined;
       const h = highlight as unknown as HighlightWithRelations;
       if (h.dailyLog) yearNumber = h.dailyLog.year.year;
-      else if (h.quarterlyReflection) yearNumber = h.quarterlyReflection.year.year;
+      else if (h.quarterlyReflection)
+        yearNumber = h.quarterlyReflection.year.year;
       else if (h.goal) yearNumber = h.goal.year.year;
       else if (h.task) yearNumber = h.task.goal.year.year;
       else if (h.subtask) yearNumber = h.subtask.task.goal.year.year;
@@ -1218,7 +1240,7 @@ export async function createHighlight(
       if (yearNumber) {
         revalidatePath(`/year/${yearNumber}`);
       }
-    revalidatePath("/dashboard");
+      revalidatePath("/dashboard");
     } catch {
       // Ignore revalidation errors in test environment
     }

@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { DailyLog } from "@prisma/client";
-import type { DailyLogWithRelations, TiptapContent } from "@/types";
+import type {
+  DailyLogWithRelations,
+  DailyLogMetadata,
+  TiptapContent,
+} from "@/types";
 import {
   format,
   addDays,
@@ -27,6 +31,7 @@ import { EditorWithPersistence } from "./editor/editor-with-persistence";
 import {
   getOrCreateDailyLog,
   updateDailyLog,
+  getDailyLogDetail,
 } from "@/lib/actions";
 import { Button } from "./ui/button";
 import { Separator } from "./ui/separator";
@@ -39,27 +44,38 @@ import { cn } from "@/lib/utils";
 interface DailyLogsProps {
   yearId: string;
   year: number;
-  initialLogs: Partial<DailyLog>[]; // Logs from list fetch might not have content
+  initialLogs: DailyLogMetadata[]; // Metadata-only logs from list fetch
   todayLog: DailyLog | null;
 }
 
 export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
   // State
   // Merge initialLogs with todayLog if it's not in the list (it should be if list is fresh, but just in case)
-  const [logs, setLogs] = useState<Partial<DailyLog>[]>(() => {
-    if (todayLog && !initialLogs.find(l => l.id === todayLog.id)) {
-      return [todayLog, ...initialLogs];
+  const [logs, setLogs] = useState<DailyLogMetadata[]>(() => {
+    if (todayLog && !initialLogs.find((l) => l.id === todayLog.id)) {
+      // Convert todayLog to metadata format for consistency
+      const todayMetadata: DailyLogMetadata = {
+        id: todayLog.id,
+        date: todayLog.date,
+        yearId: todayLog.yearId,
+        hasContent: todayLog.hasContent ?? false,
+        highlights: (todayLog as DailyLogWithRelations).highlights || [],
+      };
+      return [todayMetadata, ...initialLogs];
     }
     return initialLogs;
   });
-  
+
   const [currentDate, setCurrentDate] = useState(new Date());
-  
+
   // Initialize selectedLog with todayLog if dates match, otherwise null or find from logs
-  const [selectedLog, setSelectedLog] = useState<DailyLogWithRelations | null>(() => {
-    if (isSameDay(new Date(), currentDate) && todayLog) return todayLog as unknown as DailyLogWithRelations;
-    return null;
-  });
+  const [selectedLog, setSelectedLog] = useState<DailyLogWithRelations | null>(
+    () => {
+      if (isSameDay(new Date(), currentDate) && todayLog)
+        return todayLog as unknown as DailyLogWithRelations;
+      return null;
+    }
+  );
 
   const [isLoadingLog, setIsLoadingLog] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -72,13 +88,21 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
   const isDateFuture = isFuture(currentDate);
 
   // Helper to check if a log has meaningful content
-  const hasContent = (log?: Partial<DailyLog> | null) => {
-    if (!log || !log.content) return false;
-    if (!log || !log.content) return false;
-    const content = log.content as unknown as TiptapContent;
-    // Simple check: if it has text or multiple blocks
-    if ((content.content?.length || 0) > 1) return true;
-    if (content.content?.[0]?.content) return true;
+  const hasContent = (
+    log?: DailyLogMetadata | DailyLogWithRelations | null
+  ) => {
+    if (!log) return false;
+    // Use hasContent flag from database if available (for metadata logs)
+    if ("hasContent" in log && typeof log.hasContent === "boolean") {
+      return log.hasContent;
+    }
+    // Fallback for full logs with content field
+    if ("content" in log && log.content) {
+      const content = log.content as unknown as TiptapContent;
+      // Simple check: if it has text or multiple blocks
+      if ((content.content?.length || 0) > 1) return true;
+      if (content.content?.[0]?.content) return true;
+    }
     return false;
   };
 
@@ -90,39 +114,41 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
   useEffect(() => {
     const fetchLogForDate = async () => {
       setIsLoadingLog(true);
-      // Check local cache first
-      // We seek a log that has CONTENT (since list logs might have empty content placeholder)
-      // Actually, if we selected the log previously, we have it in `logs` with content.
-      // But the initial `logs` from server MISS content.
-      // So we must fetch if the log in `state` doesn't have content loaded.
-      
-      const cachedLog = logs.find((l) =>
-        isSameDay(new Date(l.date!), currentDate)
+
+      // Check if we have metadata for this date
+      const cachedMetadata = logs.find((l) =>
+        isSameDay(new Date(l.date), currentDate)
       );
 
-      // If cached log has content (it was fully fetched or is todayLog), use it.
-      if (cachedLog && (cachedLog as unknown as DailyLogWithRelations).content) {
-        setSelectedLog(cachedLog as unknown as DailyLogWithRelations);
+      // If we already have the full log loaded for this date, use it
+      if (selectedLog && isSameDay(new Date(selectedLog.date), currentDate)) {
         setIsLoadingLog(false);
         return;
       }
 
-      // If not in cache or missing content, and not future, fetch/create from server
+      // If not future date, fetch or create the log
       if (!isDateFuture) {
-        // Use getOrCreateDailyLog which returns the FULL log
-        const result = await getOrCreateDailyLog(yearId, currentDate);
-        if (result.success && result.data) {
-          setSelectedLog(result.data as unknown as DailyLogWithRelations);
-          // Update local cache with the FULL log
-          setLogs((prev) => {
-            const existingIndex = prev.findIndex((l) => l.id === result.data!.id);
-            if (existingIndex >= 0) {
-              const newLogs = [...prev];
-              newLogs[existingIndex] = result.data!;
-              return newLogs;
-            }
-            return [...prev, result.data!];
-          });
+        if (cachedMetadata) {
+          // We have metadata, fetch full content using getDailyLogDetail
+          const result = await getDailyLogDetail(cachedMetadata.id);
+          if (result.success && result.data) {
+            setSelectedLog(result.data as DailyLogWithRelations);
+          }
+        } else {
+          // No metadata, create new log using getOrCreateDailyLog
+          const result = await getOrCreateDailyLog(yearId, currentDate);
+          if (result.success && result.data) {
+            setSelectedLog(result.data as DailyLogWithRelations);
+            // Add to metadata cache
+            const newMetadata: DailyLogMetadata = {
+              id: result.data.id,
+              date: result.data.date,
+              yearId: result.data.yearId,
+              hasContent: result.data.hasContent ?? false,
+              highlights: result.data.highlights || [],
+            };
+            setLogs((prev) => [newMetadata, ...prev]);
+          }
         }
       } else {
         setSelectedLog(null);
@@ -131,7 +157,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
     };
 
     fetchLogForDate();
-  }, [currentDate, yearId, isDateFuture, logs]); 
+  }, [currentDate, yearId, isDateFuture, logs, selectedLog]);
 
   // Navigation Handlers
   const handlePrevDay = () => setCurrentDate((prev) => subDays(prev, 1));
@@ -146,16 +172,38 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
       // Optimistic local update
       setSelectedLog((prev) => (prev ? { ...prev, content } : null));
 
-      // Update logs array to reflect "filled" state immediately in UI
+      // Update metadata cache to reflect hasContent state
       setLogs((prev) =>
-        prev.map((l) => (l.id === selectedLog.id ? { ...l, content } : l))
+        prev.map((l) =>
+          l.id === selectedLog.id
+            ? {
+                ...l,
+                hasContent: !!(
+                  content &&
+                  content.content &&
+                  content.content.length > 0
+                ),
+              }
+            : l
+        )
       );
 
       if (saveTimeout) clearTimeout(saveTimeout);
 
       const timeout = setTimeout(async () => {
         setIsSaving(true);
-        await updateDailyLog(selectedLog.id, content);
+        const result = await updateDailyLog(selectedLog.id, content);
+        if (result.success && result.data) {
+          // Update metadata cache with server response
+          const updatedLog = result.data as DailyLog;
+          setLogs((prev) =>
+            prev.map((l) =>
+              l.id === selectedLog.id
+                ? { ...l, hasContent: updatedLog.hasContent ?? false }
+                : l
+            )
+          );
+        }
         setIsSaving(false);
       }, 1000);
 
@@ -172,16 +220,18 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
   // Calendar Modifiers
   const filledDates = logs
     .filter((l) => l.date && hasContent(l))
-    .map((l) => new Date(l.date!));
+    .map((l) => new Date(l.date));
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-20">
       {/* 1. Header & Navigation */}
-      <div 
-         className={cn(
-            "flex flex-col md:flex-row md:items-end justify-between gap-6 transition-all duration-700",
-            isFocused ? "opacity-10 blur-[2px] pointer-events-none grayscale" : "opacity-100"
-         )}
+      <div
+        className={cn(
+          "flex flex-col md:flex-row md:items-end justify-between gap-6 transition-all duration-700",
+          isFocused
+            ? "opacity-10 blur-[2px] pointer-events-none grayscale"
+            : "opacity-100"
+        )}
       >
         <div>
           <h2 className="font-serif text-3xl font-medium text-foreground flex items-center gap-3">
@@ -212,10 +262,10 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
           {/* Desktop Week Strip */}
           <div className="hidden lg:flex bg-secondary/30 rounded-lg p-1 mr-2 border border-border/50">
             {weekDays.map((day) => {
-              const logForDay = logs.find((l) =>
-                l.date && isSameDay(new Date(l.date), day)
+              const logForDay = logs.find(
+                (l) => l.date && isSameDay(new Date(l.date), day)
               );
-              // Note: If content is missing (from initial list), dot might not show. 
+              // Note: If content is missing (from initial list), dot might not show.
               // We accept this trade-off for performance, or user clicks to load.
               // Ideally server sends a boolean 'hasContent'.
               const isFilled = hasContent(logForDay);
@@ -226,7 +276,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                 <button
                   key={day.toISOString()}
                   onClick={() => setCurrentDate(day)}
-                  disabled={isFut && !isSameDay(day, new Date())} 
+                  disabled={isFut && !isSameDay(day, new Date())}
                   className={cn(
                     "w-10 h-10 rounded-md flex flex-col items-center justify-center text-[10px] font-medium transition-all relative",
                     isSelected
@@ -339,8 +389,9 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                 You&apos;re ahead of time
               </h3>
               <p className="text-muted-foreground mb-8 leading-relaxed">
-                You can&apos;t log memories that haven&apos;t happened yet. Use the Goals
-                section to plan ahead, or wait for the future to arrive.
+                You can&apos;t log memories that haven&apos;t happened yet. Use
+                the Goals section to plan ahead, or wait for the future to
+                arrive.
               </p>
               <Button onClick={jumpToToday} variant="outline">
                 Return to Today
@@ -355,18 +406,19 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                 Missed Entry
               </AlertTitle>
               <AlertDescription className="text-amber-700/80 dark:text-amber-400/80 mt-1">
-                You didn&apos;t log anything for {format(currentDate, "MMMM do")}.
-                It&apos;s never too late to backfill a quick summary.
+                You didn&apos;t log anything for{" "}
+                {format(currentDate, "MMMM do")}. It&apos;s never too late to
+                backfill a quick summary.
               </AlertDescription>
             </Alert>
-            <div 
-               className={cn(
-                  "opacity-90 transition-all duration-500 rounded-xl p-6 md:p-10",
-                  isFocused 
-                    ? "scale-[1.01] shadow-xl bg-background z-20 ring-1 ring-black/5" 
-                    : "scale-100 hover:bg-secondary/10"
-               )}
-               onFocus={() => setIsFocused(true)}
+            <div
+              className={cn(
+                "opacity-90 transition-all duration-500 rounded-xl p-6 md:p-10",
+                isFocused
+                  ? "scale-[1.01] shadow-xl bg-background z-20 ring-1 ring-black/5"
+                  : "scale-100 hover:bg-secondary/10"
+              )}
+              onFocus={() => setIsFocused(true)}
             >
               <EditorWithPersistence
                 key={isDateToday ? "today-log" : "future-log-placeholder"}
@@ -379,91 +431,104 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
                 className="prose-base md:prose-lg" // FIX #4: Responsive text size
               />
               {isFocused && (
-                 <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
-                    <Button 
-                      className="shadow-lg rounded-full px-6"
-                      size="lg"
-                      onClick={() => setIsFocused(false)}
-                    >
-                      Done Writing
-                    </Button>
-                 </div>
+                <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
+                  <Button
+                    className="shadow-lg rounded-full px-6"
+                    size="lg"
+                    onClick={() => setIsFocused(false)}
+                  >
+                    Done Writing
+                  </Button>
+                </div>
               )}
             </div>
           </div>
         ) : selectedLog ? (
           <div className="relative group perspective-1000">
-             {/* Header Dimmer Overlay */}
-             {isFocused && (
-                <div 
-                  className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-10 animate-in fade-in duration-700"
-                  onClick={() => setIsFocused(false)}
-                />
-             )}
+            {/* Header Dimmer Overlay */}
+            {isFocused && (
+              <div
+                className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-10 animate-in fade-in duration-700"
+                onClick={() => setIsFocused(false)}
+              />
+            )}
 
-            <div 
-               className={cn(
-                  "transition-all duration-700 ease-out origin-center relative",
-                  isFocused 
-                    ? "scale-[1.02] bg-background z-20 min-h-[70vh] py-12" 
-                    : "scale-100",
-                  !isFocused && "hover:bg-secondary/5 rounded-xl border border-transparent hover:border-border/40 p-4 -mx-4"
-               )}
-               onFocus={() => !isFocused && setIsFocused(true)}
+            <div
+              className={cn(
+                "transition-all duration-700 ease-out origin-center relative",
+                isFocused
+                  ? "scale-[1.02] bg-background z-20 min-h-[70vh] py-12"
+                  : "scale-100",
+                !isFocused &&
+                  "hover:bg-secondary/5 rounded-xl border border-transparent hover:border-border/40 p-4 -mx-4"
+              )}
+              onFocus={() => !isFocused && setIsFocused(true)}
             >
-                {/* Saving Indicator */}
-                <div className={cn(
-                   "flex items-center gap-2 text-xs text-muted-foreground transition-all duration-500 absolute top-0 right-0 p-4",
-                   isFocused ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                )}>
-                  {isSaving ? (
-                    <span className="flex items-center gap-1.5">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Saving...
-                    </span>
-                  ) : (
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      Saved
-                    </span>
+              {/* Saving Indicator */}
+              <div
+                className={cn(
+                  "flex items-center gap-2 text-xs text-muted-foreground transition-all duration-500 absolute top-0 right-0 p-4",
+                  isFocused
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                )}
+              >
+                {isSaving ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+                  </span>
+                ) : (
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    Saved
+                  </span>
+                )}
+              </div>
+
+              <div className="max-w-3xl mx-auto px-4 md:px-0">
+                {" "}
+                {/* FIX #1: Added px-4 for mobile gap */}
+                <div
+                  className={cn(
+                    "mb-8 text-center transition-all duration-700 delay-100",
+                    isFocused
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 -translate-y-4 hidden"
                   )}
+                >
+                  <p className="font-serif text-2xl text-foreground/80">
+                    {format(currentDate, "EEEE, MMMM do")}
+                  </p>
                 </div>
-
-                <div className="max-w-3xl mx-auto px-4 md:px-0"> {/* FIX #1: Added px-4 for mobile gap */}
-                   <div className={cn(
-                      "mb-8 text-center transition-all duration-700 delay-100",
-                       isFocused ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 hidden"
-                   )}>
-                      <p className="font-serif text-2xl text-foreground/80">
-                         {format(currentDate, "EEEE, MMMM do")}
-                      </p>
-                   </div>
-
-                   <EditorWithPersistence
-                     key={selectedLog.id} // CRITICAL: Reset editor when switching logs
-                     entityType="dailyLog"
-                     entityId={selectedLog.id}
-                     initialContent={
-                       (selectedLog.content as TiptapContent) || { type: "doc", content: [] }
-                     }
-                     highlights={selectedLog.highlights || []}
-                     onContentChange={handleContentChange}
-                     placeholder="What's on your mind today? Highlight text to tag it..."
-                     variant="minimal"
-                     className="prose-base md:prose-lg" // FIX #4: Responsive size
-                   />
-                </div>
+                <EditorWithPersistence
+                  key={selectedLog.id} // CRITICAL: Reset editor when switching logs
+                  entityType="dailyLog"
+                  entityId={selectedLog.id}
+                  initialContent={
+                    (selectedLog.content as TiptapContent) || {
+                      type: "doc",
+                      content: [],
+                    }
+                  }
+                  highlights={selectedLog.highlights || []}
+                  onContentChange={handleContentChange}
+                  placeholder="What's on your mind today? Highlight text to tag it..."
+                  variant="minimal"
+                  className="prose-base md:prose-lg" // FIX #4: Responsive size
+                />
+              </div>
             </div>
 
             {isFocused && (
-                 <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
-                    <Button 
-                      className="shadow-lg rounded-full px-6 h-12"
-                      onClick={() => setIsFocused(false)}
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Done Writing
-                    </Button>
-                 </div>
-              )}
+              <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
+                <Button
+                  className="shadow-lg rounded-full px-6 h-12"
+                  onClick={() => setIsFocused(false)}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Done Writing
+                </Button>
+              </div>
+            )}
           </div>
         ) : null}
       </div>
