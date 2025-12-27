@@ -55,38 +55,45 @@ const iconMap: Record<string, LucideIcon> = {
   "creative-dump": Sparkles,
 };
 
-export function TagExplorer({ 
-  userId, 
-  year, 
-  initialTags, 
-  initialSelectedTagId, 
-  initialContent 
+export function TagExplorer({
+  userId,
+  year,
+  initialTags,
+  initialSelectedTagId,
+  initialContent,
 }: TagExplorerProps) {
   const [tags, setTags] = useState<TagWithCount[]>(initialTags || []);
-  const [selectedTag, setSelectedTag] = useState<string | null>(initialSelectedTagId || null);
-  const [taggedContent, setTaggedContent] = useState<TaggedContent[]>(initialContent || []);
+  const [selectedTag, setSelectedTag] = useState<string | null>(
+    initialSelectedTagId || null
+  );
+  const [taggedContent, setTaggedContent] = useState<TaggedContent[]>(
+    initialContent || []
+  );
   const [tagsLoading, setTagsLoading] = useState(!initialTags);
   const [contentLoading, setContentLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
-  const handleTagClick = useCallback(async (tagId: string) => {
-    setSelectedTag(tagId);
-    setMobileSheetOpen(false); // Close mobile drawer on selection
-    setContentLoading(true);
-    const result = await getTaggedContentByTagAndYear(userId, tagId, year);
-    if (result.success && result.data) {
-      setTaggedContent(result.data);
-    }
-    setContentLoading(false);
-  }, [userId, year]);
+  const handleTagClick = useCallback(
+    async (tagId: string) => {
+      setSelectedTag(tagId);
+      setMobileSheetOpen(false); // Close mobile drawer on selection
+      setContentLoading(true);
+      const result = await getTaggedContentByTagAndYear(userId, tagId, year);
+      if (result.success && result.data) {
+        setTaggedContent(result.data);
+      }
+      setContentLoading(false);
+    },
+    [userId, year]
+  );
 
   // Load tags if not provided initially
   useEffect(() => {
     if (initialTags) {
-        setTags(initialTags);
-        setTagsLoading(false);
-        return;
+      setTags(initialTags);
+      setTagsLoading(false);
+      return;
     }
 
     const loadTags = async () => {
@@ -94,11 +101,17 @@ export function TagExplorer({
       const result = await getTagsForYear(userId, year);
       if (result.success && result.data) {
         setTags(
-          result.data.map((t: { id: string; name: string; _count: { highlights: number } }) => ({
-            id: t.id,
-            name: t.name,
-            count: t._count.highlights,
-          }))
+          result.data.map(
+            (t: {
+              id: string;
+              name: string;
+              _count: { highlights: number };
+            }) => ({
+              id: t.id,
+              name: t.name,
+              count: t._count.highlights,
+            })
+          )
         );
         // Auto-select first tag if available and nothing selected
         if (result.data.length > 0 && !selectedTag) {
@@ -108,7 +121,7 @@ export function TagExplorer({
       setTagsLoading(false);
     };
     loadTags();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, year, initialTags]);
 
   const getSourceUrl = (source: TaggedContent["source"]) => {
@@ -119,7 +132,7 @@ export function TagExplorer({
   const filteredTags = tags.filter((t) =>
     t.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+
   const activeTagName = tags.find((t) => t.id === selectedTag)?.name;
 
   // Reusable Tag List Component
@@ -172,42 +185,46 @@ export function TagExplorer({
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-full min-h-[calc(100vh-140px)] animate-in fade-in duration-500">
-      
       {/* --- Mobile: Sticky Tag Selector Bar --- */}
       <div className="md:hidden flex items-center justify-between bg-card border border-border p-3 rounded-lg shadow-sm mb-2 sticky top-0 z-10">
         <div className="flex items-center gap-2 overflow-hidden">
           {selectedTag ? (
-             <Badge variant="secondary" className="text-sm py-1 px-3 truncate max-w-[200px] border-primary/20 bg-primary/5 text-primary">
-                <Hash className="w-3 h-3 mr-1" />
-                {activeTagName}
-             </Badge>
+            <Badge
+              variant="secondary"
+              className="text-sm py-1 px-3 truncate max-w-[200px] border-primary/20 bg-primary/5 text-primary"
+            >
+              <Hash className="w-3 h-3 mr-1" />
+              {activeTagName}
+            </Badge>
           ) : (
-             <span className="text-sm text-muted-foreground">Select a tag...</span>
+            <span className="text-sm text-muted-foreground">
+              Select a tag...
+            </span>
           )}
         </div>
         <Sheet open={mobileSheetOpen} onOpenChange={setMobileSheetOpen}>
           <SheetTrigger asChild>
-             <Button variant="outline" size="sm" className="shrink-0">
-                <Filter className="w-4 h-4 mr-2" />
-                Filter
-             </Button>
+            <Button variant="outline" size="sm" className="shrink-0">
+              <Filter className="w-4 h-4 mr-2" />
+              Filter
+            </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-[85vh] rounded-t-xl">
-             <SheetHeader className="mb-4 text-left">
-                <SheetTitle>Browse Tags</SheetTitle>
-             </SheetHeader>
-             <div className="relative mb-4">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search tags..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-secondary/30"
-                />
-             </div>
-             <div className="overflow-y-auto h-[calc(100%-120px)] -mx-6 px-6">
-                <TagList isMobile={true} />
-             </div>
+            <SheetHeader className="mb-4 text-left">
+              <SheetTitle>Browse Tags</SheetTitle>
+            </SheetHeader>
+            <div className="relative mb-4">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search tags..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 bg-secondary/30"
+              />
+            </div>
+            <div className="overflow-y-auto h-[calc(100%-120px)] -mx-6 px-6">
+              <TagList isMobile={true} />
+            </div>
           </SheetContent>
         </Sheet>
       </div>
@@ -231,34 +248,38 @@ export function TagExplorer({
             />
           </div>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto pr-2 -mr-2 scrollbar-thin">
-           <TagList />
+          <TagList />
         </div>
       </div>
 
       {/* --- Main Content Feed --- */}
       <div className="flex-1 flex flex-col min-w-0 h-full">
-         {/* Desktop Header */}
-         <div className="hidden md:block mb-6 flex-none">
-            {selectedTag ? (
-               <div className="flex items-center gap-3">
-                  <Badge variant="outline" className="text-base px-4 py-1.5 font-mono font-normal bg-secondary/20">
-                     #{activeTagName}
-                  </Badge>
-                  <span className="text-muted-foreground text-sm">
-                     {taggedContent.length} highlight{taggedContent.length !== 1 ? "s" : ""}
-                  </span>
-               </div>
-            ) : (
-               <div className="h-9 flex items-center text-muted-foreground">
-                  Select a tag to view highlights
-               </div>
-            )}
-         </div>
-         
-         {/* Highlights Feed */}
-         <div className="flex-1">
+        {/* Desktop Header */}
+        <div className="hidden md:block mb-6 flex-none">
+          {selectedTag ? (
+            <div className="flex items-center gap-3">
+              <Badge
+                variant="outline"
+                className="text-base px-4 py-1.5 font-mono font-normal bg-secondary/20"
+              >
+                #{activeTagName}
+              </Badge>
+              <span className="text-muted-foreground text-sm">
+                {taggedContent.length} highlight
+                {taggedContent.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+          ) : (
+            <div className="h-9 flex items-center text-muted-foreground">
+              Select a tag to view highlights
+            </div>
+          )}
+        </div>
+
+        {/* Highlights Feed */}
+        <div className="flex-1">
           {contentLoading ? (
             <div className="flex items-center justify-center h-40">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -301,13 +322,18 @@ export function TagExplorer({
                                 <>
                                   <span className="opacity-50 shrink-0">•</span>
                                   <span className="shrink-0">
-                                    {new Date(item.createdAt).toLocaleDateString()}
+                                    {new Date(
+                                      item.createdAt
+                                    ).toLocaleDateString()}
                                   </span>
                                 </>
                               )}
                             </div>
                             {item.source && (
-                              <Link href={getSourceUrl(item.source)} className="shrink-0">
+                              <Link
+                                href={getSourceUrl(item.source)}
+                                className="shrink-0"
+                              >
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -346,7 +372,7 @@ export function TagExplorer({
               </AnimatePresence>
             </div>
           )}
-         </div>
+        </div>
       </div>
     </div>
   );

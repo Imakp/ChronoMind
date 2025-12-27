@@ -13,6 +13,7 @@ The application automatically creates daily log entries, tracks hierarchical goa
 ## ⚙️ Features
 
 ### Year-Based Organization
+
 - Create and manage separate yearly containers for your content
 - Navigate seamlessly between different years
 - Automatic initialization of all six sections when creating a new year
@@ -20,36 +21,43 @@ The application automatically creates daily log entries, tracks hierarchical goa
 ### Six Specialized Sections
 
 **Daily Logs**
+
 - Automatic creation of daily entries
 - Chronological view of your daily thoughts and activities
 - Rich text editing with full formatting support
 
 **Quarterly Reflections**
+
 - Four dedicated long-form editors (Q1, Q2, Q3, Q4)
 - Perfect for deeper insights and periodic reviews
 - Auto-save functionality to preserve your reflections
 
 **Yearly Goals**
+
 - Three-level hierarchy: Goals → Tasks → Sub-tasks
 - Automatic percentage calculation that rolls up from sub-tasks
 - Visual progress tracking at every level
 
 **Book Notes**
+
 - Three-tier organization: Genre → Book → Chapter
 - Structured approach to capturing reading insights
 - Expandable/collapsible navigation for easy browsing
 
 **Lessons Learned**
+
 - Card-based layout for discrete insights
 - Quick capture of key learnings
 - Chronologically organized for easy review
 
 **Creative Dump**
+
 - Unstructured space for spontaneous ideas
 - No organizational overhead required
 - Simple note collection with timestamps
 
 ### Global Tagging System
+
 - Highlight any text in any section
 - Assign multiple tags to highlighted content
 - Tag Explorer view shows all content associated with specific tags
@@ -57,6 +65,7 @@ The application automatically creates daily log entries, tracks hierarchical goa
 - Visual indicators for tagged content
 
 ### Rich Text Editing
+
 - Powered by Tiptap editor
 - Full formatting capabilities (bold, italic, lists, etc.)
 - Text highlighting for tagging
@@ -90,17 +99,20 @@ NEXTAUTH_SECRET="your-secret-key-here"
 ### Installation Steps
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/Imakp/chronomind.git
 cd chronomind
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Set up the database:
+
 ```bash
 # Generate Prisma client
 npm run db:generate
@@ -113,6 +125,7 @@ npm run db:seed
 ```
 
 4. Run the development server:
+
 ```bash
 npm run dev
 ```
@@ -168,6 +181,7 @@ npm start
 ## 🧰 Tech Stack
 
 ### Frontend
+
 - **Next.js 16** - React framework with App Router
 - **React 19** - UI library
 - **TypeScript** - Type-safe development
@@ -178,6 +192,7 @@ npm start
 - **Sonner** - Toast notifications
 
 ### Backend
+
 - **Next.js Server Actions** - Type-safe server operations
 - **NextAuth.js v5** - Authentication
 - **Prisma** - Database ORM
@@ -187,6 +202,7 @@ npm start
 - **bcryptjs** - Password hashing
 
 ### Development Tools
+
 - **ESLint** - Code linting
 - **tsx** - TypeScript execution
 - **Prisma Studio** - Database GUI
@@ -255,9 +271,11 @@ This project is private and proprietary. All rights reserved.
 ## 💬 Contact & Support
 
 ### Author
+
 **ChronoMind Development Team**
 
 ### Getting Help
+
 - **Issues**: [GitHub Issues](https://github.com/Imakp/chronomind/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Imakp/chronomind/discussions)
 

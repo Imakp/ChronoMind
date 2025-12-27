@@ -8,7 +8,9 @@ interface SheetContextValue {
   onOpenChange: (open: boolean) => void;
 }
 
-const SheetContext = React.createContext<SheetContextValue | undefined>(undefined);
+const SheetContext = React.createContext<SheetContextValue | undefined>(
+  undefined
+);
 
 interface SheetProps {
   children: React.ReactNode;
@@ -26,7 +28,9 @@ const Sheet = ({ children, open, onOpenChange }: SheetProps) => {
   };
 
   return (
-    <SheetContext.Provider value={{ open: !!show, onOpenChange: handleOpenChange }}>
+    <SheetContext.Provider
+      value={{ open: !!show, onOpenChange: handleOpenChange }}
+    >
       {children}
     </SheetContext.Provider>
   );
@@ -39,11 +43,7 @@ interface SheetTriggerProps {
 
 const SheetTrigger = ({ children }: SheetTriggerProps) => {
   const context = React.useContext(SheetContext);
-  return (
-    <div onClick={() => context?.onOpenChange(true)}>
-      {children}
-    </div>
-  );
+  return <div onClick={() => context?.onOpenChange(true)}>{children}</div>;
 };
 
 interface SheetContentProps {
@@ -58,7 +58,7 @@ const SheetContent = ({
   children,
 }: SheetContentProps) => {
   const context = React.useContext(SheetContext);
-  
+
   if (!context?.open) return null;
 
   return (
@@ -78,7 +78,8 @@ const SheetContent = ({
           side === "right" &&
             "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm slide-in-from-right",
           side === "top" && "inset-x-0 top-0 border-b slide-in-from-top",
-          side === "bottom" && "inset-x-0 bottom-0 border-t slide-in-from-bottom",
+          side === "bottom" &&
+            "inset-x-0 bottom-0 border-t slide-in-from-bottom",
           className
         )}
       >

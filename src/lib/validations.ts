@@ -263,11 +263,16 @@ export function sanitizeTiptapContent(content: unknown): unknown {
         const markRecord = mark as Record<string, unknown>;
 
         // Preserve mark type and attributes
-        const sanitizedMark: { type: unknown; attrs?: Record<string, unknown> } = { type: markRecord.type };
+        const sanitizedMark: {
+          type: unknown;
+          attrs?: Record<string, unknown>;
+        } = { type: markRecord.type };
 
         // Preserve mark attributes (needed for highlights, links, etc.)
         if (markRecord.attrs && typeof markRecord.attrs === "object") {
-          sanitizedMark.attrs = { ...(markRecord.attrs as Record<string, unknown>) };
+          sanitizedMark.attrs = {
+            ...(markRecord.attrs as Record<string, unknown>),
+          };
         }
 
         return sanitizedMark;

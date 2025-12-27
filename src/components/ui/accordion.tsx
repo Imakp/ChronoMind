@@ -19,9 +19,9 @@ type AccordionItemContextValue = {
   value: string;
 };
 
-const AccordionItemContext = React.createContext<AccordionItemContextValue | undefined>(
-  undefined
-);
+const AccordionItemContext = React.createContext<
+  AccordionItemContextValue | undefined
+>(undefined);
 
 interface AccordionProps {
   type: "single" | "multiple";

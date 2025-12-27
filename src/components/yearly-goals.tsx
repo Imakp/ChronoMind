@@ -113,7 +113,9 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
         if (result.success && result.data) {
           // Replace temp goal with real goal to get valid ID
           setGoals((prev) =>
-            prev.map((g) => (g.id === tempId ? (result.data as GoalWithRelations) : g))
+            prev.map((g) =>
+              g.id === tempId ? (result.data as GoalWithRelations) : g
+            )
           );
           router.refresh();
           toast.success("Goal created");
@@ -281,7 +283,11 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
 
   // --- Subtask Handlers ---
 
-  const handleCreateSubTask = (goalId: string, taskId: string, title: string) => {
+  const handleCreateSubTask = (
+    goalId: string,
+    taskId: string,
+    title: string
+  ) => {
     const tempId = `temp-sub-${Date.now()}`;
     const optimisticSub: SubTaskWithRelations = {
       id: tempId,
@@ -331,7 +337,9 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
                       return {
                         ...t,
                         subtasks: t.subtasks.map((s) =>
-                          s.id === tempId ? (result.data as SubTaskWithRelations) : s
+                          s.id === tempId
+                            ? (result.data as SubTaskWithRelations)
+                            : s
                         ),
                       };
                     }
@@ -354,7 +362,11 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
     });
   };
 
-  const handleToggleSubTask = (goalId: string, taskId: string, subTaskId: string) => {
+  const handleToggleSubTask = (
+    goalId: string,
+    taskId: string,
+    subTaskId: string
+  ) => {
     const previousGoals = goals;
 
     // 1. Optimistic Update (Deep Recalculation)
@@ -398,7 +410,11 @@ export function YearlyGoals({ yearId, year, initialGoals }: YearlyGoalsProps) {
     });
   };
 
-  const handleDeleteSubTask = (goalId: string, taskId: string, subTaskId: string) => {
+  const handleDeleteSubTask = (
+    goalId: string,
+    taskId: string,
+    subTaskId: string
+  ) => {
     const previousGoals = goals;
 
     setGoals((prev) =>
@@ -572,11 +588,30 @@ function GoalItem({
   };
 
   const getStatus = (p: number) => {
-    if (p === 100) return { label: "Completed", color: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-    if (p >= 66) return { label: "On Track", color: "bg-blue-50 text-blue-700 border-blue-200" };
-    if (p >= 33) return { label: "In Progress", color: "bg-amber-50 text-amber-700 border-amber-200" };
-    if (p > 0) return { label: "Started", color: "bg-orange-50 text-orange-700 border-orange-200" };
-    return { label: "Not Started", color: "bg-secondary text-muted-foreground border-border" };
+    if (p === 100)
+      return {
+        label: "Completed",
+        color: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      };
+    if (p >= 66)
+      return {
+        label: "On Track",
+        color: "bg-blue-50 text-blue-700 border-blue-200",
+      };
+    if (p >= 33)
+      return {
+        label: "In Progress",
+        color: "bg-amber-50 text-amber-700 border-amber-200",
+      };
+    if (p > 0)
+      return {
+        label: "Started",
+        color: "bg-orange-50 text-orange-700 border-orange-200",
+      };
+    return {
+      label: "Not Started",
+      color: "bg-secondary text-muted-foreground border-border",
+    };
   };
 
   const status = getStatus(goal.percentage);
@@ -603,14 +638,24 @@ function GoalItem({
                     <Button size="sm" onClick={handleUpdate}>
                       <Check className="w-4 h-4" />
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setIsEditing(false)}
+                    >
                       <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ) : (
                   <CardTitle className="font-serif text-2xl text-foreground flex items-center gap-3">
                     {goal.title}
-                    <Badge variant="outline" className={cn("font-sans font-normal border ml-2", status.color)}>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "font-sans font-normal border ml-2",
+                        status.color
+                      )}
+                    >
                       {status.label}
                     </Badge>
                   </CardTitle>
@@ -625,7 +670,11 @@ function GoalItem({
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground"
+                >
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -633,7 +682,10 @@ function GoalItem({
                 <DropdownMenuItem onClick={() => setIsEditing(true)}>
                   <Edit2 className="w-4 h-4 mr-2" /> Edit Title
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem
+                  onClick={handleDelete}
+                  className="text-destructive focus:text-destructive"
+                >
                   <Trash2 className="w-4 h-4 mr-2" /> Delete Goal
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -671,7 +723,12 @@ interface TaskListProps {
   onDeleteSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
 }
 
-function TaskList({ goalId, tasks, onCreateTask, ...itemProps }: TaskListProps) {
+function TaskList({
+  goalId,
+  tasks,
+  onCreateTask,
+  ...itemProps
+}: TaskListProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
 
@@ -688,7 +745,11 @@ function TaskList({ goalId, tasks, onCreateTask, ...itemProps }: TaskListProps) 
         <TaskItem key={task.id} goalId={goalId} task={task} {...itemProps} />
       ))}
       {isAdding ? (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-2 items-center">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-2 items-center"
+        >
           <Input
             placeholder="Phase title..."
             value={newTaskTitle}
@@ -697,8 +758,12 @@ function TaskList({ goalId, tasks, onCreateTask, ...itemProps }: TaskListProps) 
             className="h-9"
             autoFocus
           />
-          <Button size="sm" onClick={handleCreate}>Add</Button>
-          <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleCreate}>
+            Add
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setIsAdding(false)}>
+            Cancel
+          </Button>
         </motion.div>
       ) : (
         <Button
@@ -725,7 +790,13 @@ interface TaskItemProps {
   onDeleteSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
 }
 
-function TaskItem({ goalId, task, onUpdateTask, onDeleteTask, ...subProps }: TaskItemProps) {
+function TaskItem({
+  goalId,
+  task,
+  onUpdateTask,
+  onDeleteTask,
+  ...subProps
+}: TaskItemProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -751,7 +822,11 @@ function TaskItem({ goalId, task, onUpdateTask, onDeleteTask, ...subProps }: Tas
           onClick={() => setIsOpen(!isOpen)}
           className="p-1 hover:bg-secondary rounded text-muted-foreground transition-colors"
         >
-          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          {isOpen ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
         </button>
         {isComplete ? (
           <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
@@ -773,7 +848,12 @@ function TaskItem({ goalId, task, onUpdateTask, onDeleteTask, ...subProps }: Tas
             </div>
           ) : (
             <div className="flex items-center justify-between gap-4">
-              <span className={cn("font-medium text-sm sm:text-base truncate", isComplete && "text-muted-foreground line-through")}>
+              <span
+                className={cn(
+                  "font-medium text-sm sm:text-base truncate",
+                  isComplete && "text-muted-foreground line-through"
+                )}
+              >
                 {task.title}
               </span>
               <div className="flex items-center gap-3 opacity-0 group-hover/task:opacity-100 transition-opacity">
@@ -782,10 +862,20 @@ function TaskItem({ goalId, task, onUpdateTask, onDeleteTask, ...subProps }: Tas
                     {task.percentage.toFixed(0)}%
                   </span>
                 )}
-                <Button variant="ghost" size="icon-sm" className="h-6 w-6" onClick={() => setIsEditing(true)}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="h-6 w-6"
+                  onClick={() => setIsEditing(true)}
+                >
                   <Edit2 className="w-3 h-3 text-muted-foreground" />
                 </Button>
-                <Button variant="ghost" size="icon-sm" className="h-6 w-6 hover:text-destructive" onClick={handleDelete}>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="h-6 w-6 hover:text-destructive"
+                  onClick={handleDelete}
+                >
                   <Trash2 className="w-3 h-3" />
                 </Button>
               </div>
@@ -803,7 +893,12 @@ function TaskItem({ goalId, task, onUpdateTask, onDeleteTask, ...subProps }: Tas
             className="overflow-hidden"
           >
             <div className="pl-12 pr-4 pb-4 pt-0">
-              <SubTaskList goalId={goalId} taskId={task.id} subtasks={task.subtasks} {...subProps} />
+              <SubTaskList
+                goalId={goalId}
+                taskId={task.id}
+                subtasks={task.subtasks}
+                {...subProps}
+              />
             </div>
           </motion.div>
         )}
@@ -821,7 +916,14 @@ interface SubTaskListProps {
   onDeleteSubTask: (goalId: string, taskId: string, subTaskId: string) => void;
 }
 
-function SubTaskList({ goalId, taskId, subtasks, onCreateSubTask, onToggleSubTask, onDeleteSubTask }: SubTaskListProps) {
+function SubTaskList({
+  goalId,
+  taskId,
+  subtasks,
+  onCreateSubTask,
+  onToggleSubTask,
+  onDeleteSubTask,
+}: SubTaskListProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
 
@@ -836,20 +938,32 @@ function SubTaskList({ goalId, taskId, subtasks, onCreateSubTask, onToggleSubTas
     <div className="space-y-1 relative">
       <div className="absolute left-[-19px] top-0 bottom-4 w-px bg-border/50" />
       {subtasks.map((st) => (
-        <div key={st.id} className="group/sub flex items-center gap-3 py-1.5 text-sm min-h-[32px]">
+        <div
+          key={st.id}
+          className="group/sub flex items-center gap-3 py-1.5 text-sm min-h-[32px]"
+        >
           <div className="absolute left-[-22px] w-1.5 h-1.5 rounded-full bg-border" />
           <button
             onClick={() => onToggleSubTask(goalId, taskId, st.id)}
             className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
           >
-            {st.isComplete ? <CheckCircle2 className="w-4 h-4 text-primary" /> : <Circle className="w-4 h-4" />}
+            {st.isComplete ? (
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+            ) : (
+              <Circle className="w-4 h-4" />
+            )}
           </button>
-          <span className={cn("flex-1 truncate", st.isComplete && "text-muted-foreground line-through")}>
+          <span
+            className={cn(
+              "flex-1 truncate",
+              st.isComplete && "text-muted-foreground line-through"
+            )}
+          >
             {st.title}
           </span>
           <button
-             onClick={() => onDeleteSubTask(goalId, taskId, st.id)}
-             className="opacity-0 group-hover/sub:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
+            onClick={() => onDeleteSubTask(goalId, taskId, st.id)}
+            className="opacity-0 group-hover/sub:opacity-100 p-1 hover:bg-destructive/10 hover:text-destructive rounded transition-all"
           >
             <X className="w-3 h-3" />
           </button>
@@ -865,7 +979,9 @@ function SubTaskList({ goalId, taskId, subtasks, onCreateSubTask, onToggleSubTas
             className="h-8 text-sm"
             autoFocus
           />
-          <Button size="sm" className="h-8" onClick={handleAdd}>Add</Button>
+          <Button size="sm" className="h-8" onClick={handleAdd}>
+            Add
+          </Button>
         </div>
       ) : (
         <button

@@ -27,11 +27,24 @@ export default async function CreativeDumpPage({
 
   // Fetch initial data
   const initialDataResult = await getCreativeNotes(userYear.id);
-  const initialData = initialDataResult.success && initialDataResult.data ? (initialDataResult.data as CreativeNoteWithRelations[]) : [];
+  const initialData =
+    initialDataResult.success && initialDataResult.data
+      ? (initialDataResult.data as CreativeNoteWithRelations[])
+      : [];
 
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>}>
-        <CreativeDump yearId={userYear.id} year={userYear.year} initialData={initialData} />
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <CreativeDump
+        yearId={userYear.id}
+        year={userYear.year}
+        initialData={initialData}
+      />
     </Suspense>
   );
 }

@@ -16,8 +16,16 @@ import {
   deleteGenre,
   deleteBook,
   deleteChapter,
+  getBookDetails,
+  getChapterDetail,
 } from "@/lib/actions";
-import type { GenreWithRelations, BookWithRelations, ChapterWithRelations, TiptapContent } from "@/types";
+import type {
+  TiptapContent,
+  LibraryMetadata,
+  BookWithChapters,
+  ChapterWithContent,
+  BookMetadata,
+} from "@/types";
 import {
   Plus,
   Book,
@@ -35,7 +43,7 @@ import { cn } from "@/lib/utils";
 interface BookNotesProps {
   yearId: string;
   year: number;
-  initialData?: GenreWithRelations[];
+  initialData?: LibraryMetadata;
 }
 
 // Helper to generate consistent colors for book covers based on string
@@ -65,51 +73,81 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
     "genres"
   );
   const [isZenMode, setIsZenMode] = useState(false);
-  const [activeGenre, setActiveGenre] = useState<GenreWithRelations | null>(
+  const [activeGenre, setActiveGenre] = useState<LibraryMetadata[0] | null>(
     null
   );
-  const [activeBook, setActiveBook] = useState<BookWithRelations | null>(null);
-  const [activeChapter, setActiveChapter] = useState<ChapterWithRelations | null>(null);
+  const [activeBook, setActiveBook] = useState<BookWithChapters | null>(null);
+  const [activeChapter, setActiveChapter] = useState<ChapterWithContent | null>(
+    null
+  );
 
   // Data State
-  const [genres, setGenres] = useState<GenreWithRelations[]>(initialData || []);
+  const [genres, setGenres] = useState<LibraryMetadata>(initialData || []);
   const [isAdding, setIsAdding] = useState(false);
   const [newItemName, setNewItemName] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  // Loading States for hierarchical data
+  const [loadingBookDetails, setLoadingBookDetails] = useState(false);
+  const [loadingChapterDetail, setLoadingChapterDetail] = useState(false);
+
   const router = useRouter();
 
   // Sync state when server data updates (e.g. after revalidation)
   useEffect(() => {
     if (initialData) {
       setGenres(initialData);
-      
+
       // Refresh active objects if data updates
       if (activeGenre) {
         const updatedGenre = initialData.find((g) => g.id === activeGenre.id);
         setActiveGenre(updatedGenre || null);
-        if (updatedGenre && activeBook) {
-          const updatedBook = updatedGenre.books.find(
-            (b) => b.id === activeBook.id
-          );
-          setActiveBook(updatedBook || null);
-          if (updatedBook && activeChapter) {
-            const updatedChapter = updatedBook.chapters.find(
-              (c) => c.id === activeChapter.id
-            );
-            setActiveChapter(updatedChapter || null);
-          }
-        }
+        // Note: activeBook and activeChapter will need to be refetched
+        // since the library metadata doesn't include full book/chapter details
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
 
   const loadBookNotes = () => {
-     // Deprecated: Now handled via server props + router.refresh()
-     router.refresh(); 
+    // Deprecated: Now handled via server props + router.refresh()
+    router.refresh();
   };
 
+  // Lazy loading handlers for hierarchical data
+  const handleBookExpansion = async (
+    book: BookMetadata,
+    genre: LibraryMetadata[0]
+  ) => {
+    setLoadingBookDetails(true);
+    try {
+      const result = await getBookDetails(book.id);
+      if (result.success && result.data) {
+        setActiveGenre(genre);
+        setActiveBook(result.data as BookWithChapters);
+        setView("chapters");
+      }
+    } catch (error) {
+      console.error("Error loading book details:", error);
+    } finally {
+      setLoadingBookDetails(false);
+    }
+  };
 
+  const handleChapterOpening = async (chapterId: string) => {
+    setLoadingChapterDetail(true);
+    try {
+      const result = await getChapterDetail(chapterId);
+      if (result.success && result.data) {
+        setActiveChapter(result.data);
+        setIsZenMode(true);
+      }
+    } catch (error) {
+      console.error("Error loading chapter detail:", error);
+    } finally {
+      setLoadingChapterDetail(false);
+    }
+  };
 
   // --- Handlers ---
   const handleCreate = () => {
@@ -163,27 +201,10 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   };
 
   const handleChapterSave = async (content: TiptapContent) => {
-    if (!activeChapter || !activeBook || !activeGenre) return;
+    if (!activeChapter) return;
 
-    // Optimistic update
-    setGenres((prevGenres) => 
-        prevGenres.map(g => {
-            if (g.id !== activeGenre.id) return g;
-            return {
-                ...g,
-                books: g.books.map(b => {
-                    if (b.id !== activeBook.id) return b;
-                    return {
-                        ...b,
-                        chapters: b.chapters.map(c => {
-                            if (c.id !== activeChapter.id) return c;
-                            return { ...c, content };
-                        })
-                    };
-                })
-            };
-        })
-    );
+    // Optimistic update for the active chapter
+    setActiveChapter((prev) => (prev ? { ...prev, content } : null));
 
     await updateChapter(activeChapter.id, content);
   };
@@ -196,6 +217,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
           setView("genres");
           setActiveGenre(null);
           setActiveBook(null);
+          setActiveChapter(null);
         }}
         className="hover:text-foreground transition-colors font-medium whitespace-nowrap"
       >
@@ -208,6 +230,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
             onClick={() => {
               setView("books");
               setActiveBook(null);
+              setActiveChapter(null);
             }}
             className={cn(
               "hover:text-foreground transition-colors whitespace-nowrap",
@@ -392,17 +415,27 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
             <p className="text-muted-foreground">No books in this genre yet.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          <div
+            className={cn(
+              "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6",
+              loadingBookDetails ? "opacity-50 pointer-events-none" : ""
+            )}
+          >
+            {loadingBookDetails && (
+              <div className="col-span-full flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">
+                  Loading book details...
+                </span>
+              </div>
+            )}
             {activeGenre.books.map((book) => {
               const coverStyle = getBookColor(book.id);
               return (
                 <div
                   key={book.id}
                   className="group cursor-pointer flex flex-col gap-3"
-                  onClick={() => {
-                    setActiveBook(book);
-                    setView("chapters");
-                  }}
+                  onClick={() => handleBookExpansion(book, activeGenre)}
                 >
                   {/* Book Cover */}
                   <div
@@ -433,7 +466,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                     </p>
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <FileText className="w-3 h-3" />
-                      <span>{book.chapters.length} Chapters</span>
+                      <span>{book._count.chapters} Chapters</span>
                     </div>
                   </div>
                 </div>
@@ -450,160 +483,177 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
     const coverStyle = getBookColor(activeBook.id);
     return (
       <div className="relative">
-      <div className={cn("max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 transition-all duration-700", isZenMode ? "opacity-20 blur-sm pointer-events-none" : "opacity-100")}>
-        <Breadcrumbs />
-        {/* Book Header Card */}
-        <div className="bg-card border border-border rounded-xl p-6 flex flex-col sm:flex-row items-start gap-6 shadow-sm">
-          <div
-            className={cn(
-              "w-20 h-28 shrink-0 rounded border-l-4 shadow-sm flex items-center justify-center p-2 text-center text-[10px] font-bold leading-tight",
-              coverStyle
-            )}
-          >
-            {activeBook.title}
-          </div>
-          <div className="flex-1">
-            <h2 className="font-serif text-3xl font-medium mb-2">
-              {activeBook.title}
-            </h2>
-            <p className="text-muted-foreground text-sm flex items-center gap-2">
-              <span className="bg-secondary px-2 py-0.5 rounded text-xs font-mono">
-                {activeGenre?.name}
-              </span>
-              <span>•</span>
-              <span>{activeBook.chapters.length} Chapters</span>
-            </p>
-          </div>
-          <Button onClick={() => setIsAdding(true)} className="shrink-0">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Chapter
-          </Button>
-        </div>
-
-        {isAdding && (
-          <div className="bg-card border border-border p-4 rounded-lg flex gap-2 animate-in fade-in slide-in-from-top-2">
-            <Input
-              placeholder="Chapter Title (e.g. Chapter 1: The Beginning)"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              autoFocus
-            />
-            <Button
-              onClick={handleCreate}
-              disabled={isPending || !newItemName.trim()}
+        <div
+          className={cn(
+            "max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 transition-all duration-700",
+            isZenMode ? "opacity-20 blur-sm pointer-events-none" : "opacity-100"
+          )}
+        >
+          <Breadcrumbs />
+          {/* Book Header Card */}
+          <div className="bg-card border border-border rounded-xl p-6 flex flex-col sm:flex-row items-start gap-6 shadow-sm">
+            <div
+              className={cn(
+                "w-20 h-28 shrink-0 rounded border-l-4 shadow-sm flex items-center justify-center p-2 text-center text-[10px] font-bold leading-tight",
+                coverStyle
+              )}
             >
-              {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Create
-            </Button>
-            <Button variant="ghost" onClick={() => setIsAdding(false)}>
-              Cancel
-            </Button>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          {activeBook.chapters.length === 0 && !isAdding && (
-            <div className="text-center py-12 border-2 border-dashed border-border/50 rounded-lg bg-secondary/5">
-              <BookOpen className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
-              <p className="text-muted-foreground">
-                Start adding chapters to take notes.
+              {activeBook.title}
+            </div>
+            <div className="flex-1">
+              <h2 className="font-serif text-3xl font-medium mb-2">
+                {activeBook.title}
+              </h2>
+              <p className="text-muted-foreground text-sm flex items-center gap-2">
+                <span className="bg-secondary px-2 py-0.5 rounded text-xs font-mono">
+                  {activeGenre?.name}
+                </span>
+                <span>•</span>
+                <span>{activeBook.chapters.length} Chapters</span>
               </p>
             </div>
+            <Button onClick={() => setIsAdding(true)} className="shrink-0">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Chapter
+            </Button>
+          </div>
+
+          {isAdding && (
+            <div className="bg-card border border-border p-4 rounded-lg flex gap-2 animate-in fade-in slide-in-from-top-2">
+              <Input
+                placeholder="Chapter Title (e.g. Chapter 1: The Beginning)"
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                autoFocus
+              />
+              <Button
+                onClick={handleCreate}
+                disabled={isPending || !newItemName.trim()}
+              >
+                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Create
+              </Button>
+              <Button variant="ghost" onClick={() => setIsAdding(false)}>
+                Cancel
+              </Button>
+            </div>
           )}
-          {activeBook.chapters.map((chapter: ChapterWithRelations, index: number) => (
-            <Card
-              key={chapter.id}
-              className="hover:border-primary/50 transition-all cursor-pointer group"
-                onClick={() => {
-                setActiveChapter(chapter);
-                setIsZenMode(true);
-              }}
-            >
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-muted-foreground/50 text-sm w-6 font-medium">
-                    {(index + 1).toString().padStart(2, "0")}
-                  </span>
-                  <span className="font-medium text-foreground group-hover:text-primary transition-colors">
-                    {chapter.title}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(chapter.id, "chapter");
-                    }}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+          <div className="space-y-2">
+            {activeBook.chapters.length === 0 && !isAdding && (
+              <div className="text-center py-12 border-2 border-dashed border-border/50 rounded-lg bg-secondary/5">
+                <BookOpen className="w-10 h-10 mx-auto text-muted-foreground/30 mb-3" />
+                <p className="text-muted-foreground">
+                  Start adding chapters to take notes.
+                </p>
+              </div>
+            )}
+            {activeBook.chapters.map((chapter, index: number) => (
+              <Card
+                key={chapter.id}
+                className={cn(
+                  "hover:border-primary/50 transition-all cursor-pointer group",
+                  loadingChapterDetail ? "opacity-50 pointer-events-none" : ""
+                )}
+                onClick={() => handleChapterOpening(chapter.id)}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-muted-foreground/50 text-sm w-6 font-medium">
+                      {(index + 1).toString().padStart(2, "0")}
+                    </span>
+                    <span className="font-medium text-foreground group-hover:text-primary transition-colors">
+                      {chapter.title}
+                    </span>
+                    {chapter._count.highlights > 0 && (
+                      <Badge variant="secondary" className="text-xs">
+                        {chapter._count.highlights} highlights
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {loadingChapterDetail && (
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(chapter.id, "chapter");
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
-      </div>
-      
-      {/* ZEN MODE OVERLAY */}
-      <AnimatePresence>
-        {isZenMode && activeChapter && (
-           <motion.div
-             key="book-zen-editor"
-             initial={{ opacity: 0, y: 50, scale: 0.95 }}
-             animate={{ opacity: 1, y: 0, scale: 1 }}
-             exit={{ opacity: 0, y: 50, scale: 0.95 }}
-             transition={{ duration: 0.3 }}
-             className="fixed inset-0 z-50 bg-background overflow-y-auto p-4 sm:p-12 md:p-20"
-           >
-             <div className="max-w-4xl mx-auto h-full flex flex-col">
+
+        {/* ZEN MODE OVERLAY */}
+        <AnimatePresence>
+          {isZenMode && activeChapter && (
+            <motion.div
+              key="book-zen-editor"
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="fixed inset-0 z-50 bg-background overflow-y-auto p-4 sm:p-12 md:p-20"
+            >
+              <div className="max-w-4xl mx-auto h-full flex flex-col">
                 {/* Header/Close Button */}
                 <div className="flex justify-between items-center mb-8 shrink-0">
-                    <div className="flex items-center">
-                         <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsZenMode(false)}
-                            className="mr-4 rounded-full"
-                        >
-                            <ArrowLeft className="w-5 h-5 mr-2" /> Back to Chapters
-                        </Button>
-                        <h2 className="font-serif text-3xl font-bold tracking-tight text-gray-900">
-                         {activeChapter.title}
-                        </h2>
-                    </div>
+                  <div className="flex items-center">
                     <Button
-                        onClick={() => setIsZenMode(false)}
-                        className="rounded-full shadow-lg"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsZenMode(false)}
+                      className="mr-4 rounded-full"
                     >
-                        Done Editing
+                      <ArrowLeft className="w-5 h-5 mr-2" /> Back to Chapters
                     </Button>
+                    <h2 className="font-serif text-3xl font-bold tracking-tight text-gray-900">
+                      {activeChapter.title}
+                    </h2>
+                  </div>
+                  <Button
+                    onClick={() => setIsZenMode(false)}
+                    className="rounded-full shadow-lg"
+                  >
+                    Done Editing
+                  </Button>
                 </div>
 
                 {/* Editor Area */}
                 <div className="flex-1 overflow-y-auto -mx-4 sm:-mx-8">
-                  <div className="max-w-3xl mx-auto px-4 md:px-0"> {/* FIX #1 */}
+                  <div className="max-w-3xl mx-auto px-4 md:px-0">
+                    {" "}
+                    {/* FIX #1 */}
                     <EditorWithPersistence
-                        key={activeChapter.id}
-                        entityType="chapter"
-                        entityId={activeChapter.id}
-                        initialContent={(activeChapter.content as TiptapContent) || undefined}
-                        highlights={activeChapter.highlights || []}
-                        onContentChange={handleChapterSave}
-                        placeholder="Start your notes or summary here..."
-                        variant="minimal"
-                        className="prose-base md:prose-lg" // FIX #4
+                      key={activeChapter.id}
+                      entityType="chapter"
+                      entityId={activeChapter.id}
+                      initialContent={
+                        (activeChapter.content as TiptapContent) || undefined
+                      }
+                      highlights={activeChapter.highlights || []}
+                      onContentChange={handleChapterSave}
+                      placeholder="Start your notes or summary here..."
+                      variant="minimal"
+                      className="prose-base md:prose-lg" // FIX #4
                     />
                   </div>
                 </div>
-             </div>
-           </motion.div>
-        )}
-      </AnimatePresence>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -636,7 +686,9 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                 key={activeChapter.id}
                 entityType="chapter"
                 entityId={activeChapter.id}
-                initialContent={(activeChapter.content as TiptapContent) || undefined}
+                initialContent={
+                  (activeChapter.content as TiptapContent) || undefined
+                }
                 highlights={activeChapter.highlights || []}
                 onContentChange={handleChapterSave}
                 placeholder="Write your chapter notes, quotes, and thoughts here..."

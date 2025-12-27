@@ -37,16 +37,16 @@ interface RichTextEditorProps {
 }
 
 // Helper for cleaner button rendering in bubble menu
-const BubbleButton = ({ 
-  onClick, 
-  isActive, 
-  children, 
-  label 
-}: { 
-  onClick: () => void; 
-  isActive?: boolean; 
-  children: React.ReactNode; 
-  label: string 
+const BubbleButton = ({
+  onClick,
+  isActive,
+  children,
+  label,
+}: {
+  onClick: () => void;
+  isActive?: boolean;
+  children: React.ReactNode;
+  label: string;
 }) => (
   <button
     onClick={onClick}
@@ -70,7 +70,7 @@ export function RichTextEditor({
   entityId,
   userId,
   highlights = [],
-  variant = 'default'
+  variant = "default",
 }: RichTextEditorProps) {
   const isLoaded = useRef(false);
 
@@ -83,13 +83,13 @@ export function RichTextEditor({
       }),
       Placeholder.configure({
         placeholder: placeholder,
-        emptyEditorClass: 'is-editor-empty',
+        emptyEditorClass: "is-editor-empty",
       }),
       HighlightWithTags.configure({
         multicolor: true,
       }),
       BubbleMenuExtension.configure({
-        pluginKey: 'bubbleMenu',
+        pluginKey: "bubbleMenu",
       }),
     ],
     content: content || "",
@@ -102,7 +102,9 @@ export function RichTextEditor({
       attributes: {
         class: cn(
           "prose prose-sm max-w-none focus:outline-none px-3 sm:px-4 py-3",
-          variant === 'minimal' ? "min-h-[300px] sm:prose-base prose-xl px-0 py-0" : "min-h-[200px]"
+          variant === "minimal"
+            ? "min-h-[300px] sm:prose-base prose-xl px-0 py-0"
+            : "min-h-[200px]"
         ),
       },
     },
@@ -134,18 +136,18 @@ export function RichTextEditor({
   }
 
   return (
-    <div 
+    <div
       className={cn(
         "relative rounded-lg bg-white",
-        variant === 'default' && "border border-gray-300",
-        variant === 'minimal' && "border-none bg-transparent shadow-none"
+        variant === "default" && "border border-gray-300",
+        variant === "minimal" && "border-none bg-transparent shadow-none"
       )}
     >
       {editable && (
         <BubbleMenu
-          editor={editor} 
-          options={{ 
-            placement: 'bottom',
+          editor={editor}
+          options={{
+            placement: "bottom",
             offset: 15,
             flip: true,
           }}
@@ -158,7 +160,7 @@ export function RichTextEditor({
           >
             <Bold className="w-4 h-4" />
           </BubbleButton>
-          
+
           <BubbleButton
             onClick={() => editor.chain().focus().toggleItalic().run()}
             isActive={editor.isActive("italic")}
@@ -168,7 +170,9 @@ export function RichTextEditor({
           </BubbleButton>
 
           <BubbleButton
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
             isActive={editor.isActive("heading", { level: 2 })}
             label="Heading"
           >
@@ -204,10 +208,10 @@ export function RichTextEditor({
           </BubbleButton>
         </BubbleMenu>
       )}
-      
-      {editable && variant !== 'minimal' && (
+
+      {editable && variant !== "minimal" && (
         <div className="flex items-center flex-wrap gap-1 p-2 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-           <Button
+          <Button
             onClick={() => editor.chain().focus().toggleBold().run()}
             variant={editor.isActive("bold") ? "default" : "outline"}
             size="sm"
@@ -226,8 +230,12 @@ export function RichTextEditor({
             <Italic className="w-4 h-4" />
           </Button>
           <Button
-            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            variant={editor.isActive("heading", { level: 2 }) ? "default" : "outline"}
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
+            variant={
+              editor.isActive("heading", { level: 2 }) ? "default" : "outline"
+            }
             size="sm"
             className="h-8 w-8 p-0"
             title="Heading"

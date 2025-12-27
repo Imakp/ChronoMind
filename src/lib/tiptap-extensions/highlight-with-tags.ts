@@ -70,7 +70,7 @@ export const HighlightWithTags = Mark.create<HighlightWithTagsOptions>({
       },
       {
         tag: "mark[data-highlight-id]",
-      }
+      },
     ];
   },
 

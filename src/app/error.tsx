@@ -22,10 +22,11 @@ export default function Error({
           <AlertTriangle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
         </div>
         <h2 className="text-xl font-semibold tracking-tight">
-            Unable to load this section
+          Unable to load this section
         </h2>
         <p className="text-sm text-muted-foreground">
-          {error.message || "An unexpected error occurred while loading this content."}
+          {error.message ||
+            "An unexpected error occurred while loading this content."}
         </p>
         <Button onClick={() => reset()} variant="outline" className="mt-4">
           Try again

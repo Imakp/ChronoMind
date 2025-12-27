@@ -26,17 +26,24 @@ export default async function YearlyGoalsPage({
   if (!userYear) redirect("/");
 
   const goalsResult = await getGoals(userYear.id);
-  const initialGoals = goalsResult.success && goalsResult.data ? (goalsResult.data as GoalWithRelations[]) : [];
+  const initialGoals =
+    goalsResult.success && goalsResult.data
+      ? (goalsResult.data as GoalWithRelations[])
+      : [];
 
   return (
-    <Suspense 
+    <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[50vh]">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       }
     >
-      <YearlyGoals yearId={userYear.id} year={userYear.year} initialGoals={initialGoals} />
+      <YearlyGoals
+        yearId={userYear.id}
+        year={userYear.year}
+        initialGoals={initialGoals}
+      />
     </Suspense>
   );
 }

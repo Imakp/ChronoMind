@@ -9,7 +9,12 @@ import type { TiptapContent } from "@/types";
 import { Highlight } from "@prisma/client";
 
 interface EditorWithPersistenceProps {
-  entityType: "creativeNote" | "lesson" | "dailyLog" | "quarterlyReflection" | "chapter";
+  entityType:
+    | "creativeNote"
+    | "lesson"
+    | "dailyLog"
+    | "quarterlyReflection"
+    | "chapter";
   entityId: string;
   initialContent?: TiptapContent;
   onContentChange?: (content: TiptapContent) => void;
@@ -32,7 +37,9 @@ export function EditorWithPersistence({
   className,
 }: EditorWithPersistenceProps) {
   const { data: session } = useSession();
-  const [content, setContent] = useState<TiptapContent | undefined>(initialContent);
+  const [content, setContent] = useState<TiptapContent | undefined>(
+    initialContent
+  );
   const [prevInitialContent, setPrevInitialContent] = useState(initialContent);
 
   // Sync with server props (render-time adjustment pattern)

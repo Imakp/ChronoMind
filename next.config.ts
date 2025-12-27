@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: [
       // "@tiptap/react",
-      // "@tiptap/starter-kit", 
+      // "@tiptap/starter-kit",
       "lucide-react",
     ],
   },

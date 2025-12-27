@@ -19,14 +19,13 @@ import { Button } from "@/components/ui/button";
 import { signOut, useSession } from "next-auth/react";
 import { YearSwitcher } from "@/components/navigation/year-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useState, useEffect } from "react"; 
+import { useState, useEffect } from "react";
 
 interface AppShellProps {
   children: React.ReactNode;
   year: number;
   userId: string;
 }
-
 
 interface SidebarContentProps {
   year: number;
@@ -170,7 +169,11 @@ export function AppShell({ children, year, userId }: AppShellProps) {
     <div className="min-h-screen flex bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden md:block w-64 fixed inset-y-0 z-50">
-        <SidebarContent year={year} userId={userId} setMobileOpen={setMobileOpen} />
+        <SidebarContent
+          year={year}
+          userId={userId}
+          setMobileOpen={setMobileOpen}
+        />
       </aside>
 
       {/* Mobile Header */}
@@ -182,9 +185,7 @@ export function AppShell({ children, year, userId }: AppShellProps) {
           <div className="w-8 h-8 bg-primary text-primary-foreground rounded-lg flex items-center justify-center font-serif font-bold text-xl">
             C
           </div>
-          <span className="font-serif font-bold text-lg">
-            ChronoMind
-          </span>
+          <span className="font-serif font-bold text-lg">ChronoMind</span>
         </Link>
         <Button
           variant="ghost"
@@ -203,7 +204,11 @@ export function AppShell({ children, year, userId }: AppShellProps) {
             onClick={() => setMobileOpen(false)}
           />
           <div className="md:hidden fixed inset-y-0 left-0 z-50 w-72 bg-background border-r border-border">
-            <SidebarContent year={year} userId={userId} setMobileOpen={setMobileOpen} />
+            <SidebarContent
+              year={year}
+              userId={userId}
+              setMobileOpen={setMobileOpen}
+            />
           </div>
         </>
       )}

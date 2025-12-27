@@ -10,7 +10,9 @@ export type ActionResult<T = unknown> = {
 /**
  * Handles errors from server actions and returns a consistent error response
  */
-export function handleActionError<T = unknown>(error: unknown): ActionResult<T> {
+export function handleActionError<T = unknown>(
+  error: unknown
+): ActionResult<T> {
   console.error("Action error:", error);
 
   // Handle Zod validation errors

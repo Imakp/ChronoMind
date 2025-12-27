@@ -15,7 +15,7 @@ import {
   Highlight,
 } from "@prisma/client";
 
-export type { Chapter };
+export type { Chapter, Book, Genre };
 
 export type UserWithRelations = User & {
   years: Year[];
@@ -93,6 +93,51 @@ export type LessonWithRelations = Lesson & {
 
 export type BookWithRelations = Book & {
   chapters: ChapterWithRelations[];
+};
+
+// Hierarchical Book Notes types for performance optimization
+export type LibraryMetadata = {
+  id: string;
+  name: string;
+  yearId: string;
+  books: BookMetadata[];
+}[];
+
+export type BookMetadata = {
+  id: string;
+  title: string;
+  genreId: string;
+  _count: {
+    chapters: number;
+  };
+};
+
+export type BookWithChapters = {
+  id: string;
+  title: string;
+  genreId: string;
+  genre: {
+    id: string;
+    name: string;
+    yearId: string;
+  };
+  chapters: ChapterMetadata[];
+};
+
+export type ChapterMetadata = {
+  id: string;
+  title: string;
+  bookId: string;
+  _count: {
+    highlights: number;
+  };
+};
+
+export type ChapterWithContent = Chapter & {
+  highlights: Highlight[];
+  book: Book & {
+    genre: Genre;
+  };
 };
 
 export type TiptapContent = {

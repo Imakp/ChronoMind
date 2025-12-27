@@ -14,10 +14,16 @@ const DropdownMenu = ({ children }: DropdownMenuProps) => {
     <div className="relative inline-block">
       {React.Children.map(children, (child) => {
         if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<{ open: boolean; onOpenChange: (open: boolean) => void }>, {
-            open,
-            onOpenChange: setOpen,
-          });
+          return React.cloneElement(
+            child as React.ReactElement<{
+              open: boolean;
+              onOpenChange: (open: boolean) => void;
+            }>,
+            {
+              open,
+              onOpenChange: setOpen,
+            }
+          );
         }
         return child;
       })}
@@ -43,9 +49,12 @@ const DropdownMenuTrigger = ({
   };
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<{ onClick?: () => void }>, {
-      onClick: handleClick,
-    });
+    return React.cloneElement(
+      children as React.ReactElement<{ onClick?: () => void }>,
+      {
+        onClick: handleClick,
+      }
+    );
   }
 
   return <button onClick={handleClick}>{children}</button>;

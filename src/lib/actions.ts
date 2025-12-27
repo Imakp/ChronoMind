@@ -842,6 +842,110 @@ export async function getBookNotes(yearId: string) {
   }
 }
 
+// Hierarchical Book Notes API Functions for Performance Optimization
+
+export async function getLibrary(yearId: string) {
+  try {
+    const genres = await db.genre.findMany({
+      where: { yearId },
+      select: {
+        id: true,
+        name: true,
+        yearId: true,
+        books: {
+          select: {
+            id: true,
+            title: true,
+            genreId: true,
+            _count: {
+              select: {
+                chapters: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return { success: true, data: genres };
+  } catch (error) {
+    console.error("Error fetching library:", error);
+    return { success: false, error: "Failed to fetch library" };
+  }
+}
+
+export async function getBookDetails(bookId: string) {
+  try {
+    const book = await db.book.findUnique({
+      where: { id: bookId },
+      select: {
+        id: true,
+        title: true,
+        genreId: true,
+        genre: {
+          select: {
+            id: true,
+            name: true,
+            yearId: true,
+          },
+        },
+        chapters: {
+          select: {
+            id: true,
+            title: true,
+            bookId: true,
+            _count: {
+              select: {
+                highlights: true,
+              },
+            },
+          },
+          orderBy: { title: "asc" },
+        },
+      },
+    });
+
+    if (!book) {
+      return { success: false, error: "Book not found" };
+    }
+
+    return { success: true, data: book };
+  } catch (error) {
+    console.error("Error fetching book details:", error);
+    return { success: false, error: "Failed to fetch book details" };
+  }
+}
+
+export async function getChapterDetail(chapterId: string) {
+  try {
+    const chapter = await db.chapter.findUnique({
+      where: { id: chapterId },
+      include: {
+        highlights: {
+          include: {
+            tags: true,
+          },
+        },
+        book: {
+          include: {
+            genre: true,
+          },
+        },
+      },
+    });
+
+    if (!chapter) {
+      return { success: false, error: "Chapter not found" };
+    }
+
+    return { success: true, data: chapter };
+  } catch (error) {
+    console.error("Error fetching chapter detail:", error);
+    return { success: false, error: "Failed to fetch chapter detail" };
+  }
+}
+
 export async function deleteGenre(genreId: string) {
   try {
     const deletedGenre = await db.genre.delete({

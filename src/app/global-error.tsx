@@ -29,16 +29,16 @@ export default function GlobalError({
             We apologize for the inconvenience. An unexpected error occurred.
           </p>
           <div className="flex gap-2 mt-4">
-            <Button onClick={() => window.location.href = "/"}>
-                Go Home
+            <Button onClick={() => (window.location.href = "/")}>
+              Go Home
             </Button>
             <Button variant="outline" onClick={() => reset()}>
               Try again
             </Button>
           </div>
-           {error.digest && (
+          {error.digest && (
             <code className="mt-4 text-xs text-muted-foreground bg-muted p-1 rounded">
-                Ref: {error.digest}
+              Ref: {error.digest}
             </code>
           )}
         </div>
