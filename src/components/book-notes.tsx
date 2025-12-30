@@ -1,7 +1,7 @@
 // src/components/book-notes.tsx
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,11 +23,11 @@ import type {
   LibraryMetadata,
   BookWithChapters,
   ChapterWithContent,
-  BookMetadata,
 } from "@/types";
+import type { ChapterMetadata } from "@/types";
+import type { Chapter } from "@prisma/client";
 import {
   Plus,
-  Book,
   Trash2,
   ChevronRight,
   Library,
@@ -89,7 +89,10 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   );
 
   // --- 2. Data & UI State ---
-  const [genres, setGenres] = useState<LibraryMetadata>(initialData || []);
+  // Use initialData directly in useState to avoid effect synchronization
+  const [genres, setGenres] = useState<LibraryMetadata>(
+    () => initialData || []
+  );
 
   // Active Data Containers
   const [activeBookData, setActiveBookData] = useState<BookWithChapters | null>(
@@ -101,7 +104,6 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   // Loading States
   const [loadingBookDetails, setLoadingBookDetails] = useState(false);
   const [loadingChapterDetail, setLoadingChapterDetail] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
   // UI States (Creation)
   const [isAdding, setIsAdding] = useState(false);
@@ -114,48 +116,78 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
 
   // --- 3. Data Fetching Effects ---
 
-  // Sync initialData if server revalidates
+  // Sync initialData if server revalidates - use key to reset state
   useEffect(() => {
-    if (initialData) setGenres(initialData);
+    setGenres(initialData || []);
   }, [initialData]);
 
   // Fetch Book Details when URL bookId changes
   useEffect(() => {
-    if (
-      activeBookId &&
-      (!activeBookData || activeBookData.id !== activeBookId)
-    ) {
-      setLoadingBookDetails(true);
-      getBookDetails(activeBookId)
-        .then((res) => {
-          if (res.success && res.data) {
-            setActiveBookData(res.data as BookWithChapters);
-          }
-        })
-        .finally(() => setLoadingBookDetails(false));
-    } else if (!activeBookId) {
+    if (!activeBookId) {
       setActiveBookData(null);
+      return;
     }
+
+    if (activeBookData && activeBookData.id === activeBookId) {
+      return; // Already have the correct data
+    }
+
+    let cancelled = false;
+
+    const fetchBookDetails = async () => {
+      setLoadingBookDetails(true);
+      try {
+        const res = await getBookDetails(activeBookId);
+        if (!cancelled && res.success && res.data) {
+          setActiveBookData(res.data as BookWithChapters);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingBookDetails(false);
+        }
+      }
+    };
+
+    fetchBookDetails();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeBookId, activeBookData]);
 
   // Fetch Chapter Details when URL chapterId changes
   useEffect(() => {
-    if (
-      activeChapterId &&
-      (!activeChapterData || activeChapterData.id !== activeChapterId)
-    ) {
-      setLoadingChapterDetail(true);
-      getChapterDetail(activeChapterId)
-        .then((res) => {
-          if (res.success && res.data) {
-            setActiveChapterData(res.data);
-          }
-        })
-        .finally(() => setLoadingChapterDetail(false));
-    } else if (!activeChapterId) {
+    if (!activeChapterId) {
       setActiveChapterData(null);
       setIsFocused(false); // Reset focus when leaving chapter
+      return;
     }
+
+    if (activeChapterData && activeChapterData.id === activeChapterId) {
+      return; // Already have the correct data
+    }
+
+    let cancelled = false;
+
+    const fetchChapterDetails = async () => {
+      setLoadingChapterDetail(true);
+      try {
+        const res = await getChapterDetail(activeChapterId);
+        if (!cancelled && res.success && res.data) {
+          setActiveChapterData(res.data);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingChapterDetail(false);
+        }
+      }
+    };
+
+    fetchChapterDetails();
+
+    return () => {
+      cancelled = true;
+    };
   }, [activeChapterId, activeChapterData]);
 
   // Derived Active Objects
@@ -173,30 +205,154 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
 
   // --- 4. Handlers ---
 
-  const handleCreate = () => {
-    if (!newItemName.trim()) return;
-    startTransition(async () => {
-      let success = false;
-      if (view === "genres") {
-        const res = await createGenre(yearId, newItemName.trim());
-        success = res.success;
-      } else if (view === "books" && activeGenre) {
-        const res = await createBook(activeGenre.id, newItemName.trim());
-        success = res.success;
-      } else if (view === "chapters" && activeBook) {
-        const res = await createChapter(activeBook.id, newItemName.trim(), {
-          type: "doc",
-          content: [],
-        });
-        success = res.success;
-      }
+  const handleCreate = async () => {
+    const name = newItemName.trim();
+    if (!name) return;
 
-      if (success) {
-        setNewItemName("");
-        setIsAdding(false);
-        router.refresh();
+    // 1. Clear input immediately for responsiveness
+    setNewItemName("");
+    setIsAdding(false);
+
+    // 2. Generate temporary ID
+    const tempId = `temp-${Date.now()}`;
+
+    // 3. Optimistically update state based on view
+    if (view === "genres") {
+      const optimisticGenre = {
+        id: tempId,
+        name: name,
+        yearId: yearId,
+        books: [],
+      };
+
+      // Add to local state immediately
+      setGenres((prev) => [...prev, optimisticGenre]);
+
+      // 4. Perform server action
+      const res = await createGenre(yearId, name);
+
+      if (res.success && res.data) {
+        // 5. Swap temp ID with real ID from server - cast to match LibraryMetadata type
+        const serverGenre = {
+          id: res.data.id,
+          name: res.data.name,
+          yearId: res.data.yearId,
+          books: [],
+        };
+        setGenres((prev) =>
+          prev.map((g) => (g.id === tempId ? serverGenre : g))
+        );
+      } else {
+        // Rollback on failure
+        setGenres((prev) => prev.filter((g) => g.id !== tempId));
+        // TODO: Show toast error notification
       }
-    });
+    } else if (view === "books" && activeGenre) {
+      const optimisticBook = {
+        id: tempId,
+        title: name,
+        genreId: activeGenre.id,
+        chapters: [],
+        _count: { chapters: 0 },
+      };
+
+      // Update the genres tree to include the new book
+      setGenres((prev) =>
+        prev.map((g) => {
+          if (g.id === activeGenre.id) {
+            return { ...g, books: [...g.books, optimisticBook] };
+          }
+          return g;
+        })
+      );
+
+      const res = await createBook(activeGenre.id, name);
+
+      if (res.success && res.data) {
+        setGenres((prev) =>
+          prev.map((g) => {
+            if (g.id === activeGenre.id) {
+              // Cast server response to match BookMetadata type
+              const serverBook = {
+                id: res.data.id,
+                title: res.data.title,
+                genreId: res.data.genreId,
+                _count: { chapters: 0 },
+              };
+              return {
+                ...g,
+                books: g.books.map((b) => (b.id === tempId ? serverBook : b)),
+              };
+            }
+            return g;
+          })
+        );
+      } else {
+        // Rollback
+        setGenres((prev) =>
+          prev.map((g) =>
+            g.id === activeGenre.id
+              ? { ...g, books: g.books.filter((b) => b.id !== tempId) }
+              : g
+          )
+        );
+        // TODO: Show toast error notification
+      }
+    } else if (view === "chapters" && activeBook) {
+      const optimisticChapter: ChapterMetadata = {
+        id: tempId,
+        title: name,
+        bookId: activeBook.id,
+        _count: { highlights: 0 },
+      };
+
+      // Update activeBookData directly
+      setActiveBookData((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          chapters: [...prev.chapters, optimisticChapter],
+        };
+      });
+
+      const res = await createChapter(activeBook.id, name, {
+        type: "doc",
+        content: [],
+      });
+
+      if (res.success && res.data) {
+        setActiveBookData((prev) => {
+          if (!prev) return null;
+          // Cast server response to match ChapterMetadata type
+          const chapter = res.data as Chapter;
+          const serverChapter: ChapterMetadata = {
+            id: chapter.id,
+            title: chapter.title,
+            bookId: chapter.bookId,
+            _count: { highlights: 0 },
+          };
+          return {
+            ...prev,
+            chapters: prev.chapters.map((c) =>
+              c.id === tempId ? serverChapter : c
+            ),
+          };
+        });
+      } else {
+        // Rollback
+        setActiveBookData((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            chapters: prev.chapters.filter((c) => c.id !== tempId),
+          };
+        });
+        // TODO: Show toast error notification
+      }
+    }
+
+    // 6. Finally refresh router to ensure server cache is in sync
+    router.refresh();
   };
 
   const handleDelete = async (
@@ -204,19 +360,55 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
     type: "genre" | "book" | "chapter"
   ) => {
     if (!confirm("Are you sure? This cannot be undone.")) return;
-    startTransition(async () => {
-      if (type === "genre") await deleteGenre(id);
-      if (type === "book") await deleteBook(id);
-      if (type === "chapter") await deleteChapter(id);
 
+    // Optimistically remove from UI immediately
+    if (type === "genre") {
+      setGenres((prev) => prev.filter((g) => g.id !== id));
+    } else if (type === "book" && activeGenre) {
+      setGenres((prev) =>
+        prev.map((g) => {
+          if (g.id === activeGenre.id) {
+            return { ...g, books: g.books.filter((b) => b.id !== id) };
+          }
+          return g;
+        })
+      );
+    } else if (type === "chapter") {
+      setActiveBookData((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          chapters: prev.chapters.filter((c) => c.id !== id),
+        };
+      });
+    }
+
+    // Perform server action
+    try {
+      let res;
+      if (type === "genre") res = await deleteGenre(id);
+      if (type === "book") res = await deleteBook(id);
+      if (type === "chapter") res = await deleteChapter(id);
+
+      if (!res?.success) {
+        // Rollback on failure - refresh to restore server state
+        router.refresh();
+        // TODO: Show toast error notification
+      }
+    } catch {
+      // Rollback on error - refresh to restore server state
       router.refresh();
+      // TODO: Show toast error notification
+    }
 
-      // Navigate back if deleting current parent
-      if (type === "chapter" && activeChapterId === id)
-        updateUrl({ chapterId: null });
-      if (type === "book" && activeBookId === id)
-        updateUrl({ bookId: null, chapterId: null });
-    });
+    // Navigate back if deleting current parent
+    if (type === "chapter" && activeChapterId === id)
+      updateUrl({ chapterId: null });
+    if (type === "book" && activeBookId === id)
+      updateUrl({ bookId: null, chapterId: null });
+
+    // Refresh router to ensure server cache is in sync
+    router.refresh();
   };
 
   // Optimistic Auto-Save (Matches DailyLogs implementation)
@@ -325,10 +517,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
               autoFocus
             />
-            <Button
-              onClick={handleCreate}
-              disabled={isPending || !newItemName.trim()}
-            >
+            <Button onClick={handleCreate} disabled={!newItemName.trim()}>
               Create
             </Button>
             <Button variant="ghost" onClick={() => setIsAdding(false)}>
@@ -349,7 +538,10 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
           {genres.map((genre) => (
             <Card
               key={genre.id}
-              className="cursor-pointer hover:shadow-md transition-all group border-l-4 border-l-primary/10 hover:border-l-primary"
+              className={cn(
+                "cursor-pointer hover:shadow-md transition-all group border-l-4 border-l-primary/10 hover:border-l-primary",
+                genre.id.startsWith("temp-") && "opacity-70"
+              )}
               onClick={() => updateUrl({ genreId: genre.id })}
             >
               <CardContent className="p-6 flex items-center justify-between">
@@ -414,10 +606,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
               autoFocus
             />
-            <Button
-              onClick={handleCreate}
-              disabled={isPending || !newItemName.trim()}
-            >
+            <Button onClick={handleCreate} disabled={!newItemName.trim()}>
               Create
             </Button>
             <Button variant="ghost" onClick={() => setIsAdding(false)}>
@@ -442,7 +631,10 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
             return (
               <div
                 key={book.id}
-                className="group cursor-pointer flex flex-col gap-3"
+                className={cn(
+                  "group cursor-pointer flex flex-col gap-3",
+                  book.id.startsWith("temp-") && "opacity-70"
+                )}
                 onClick={() =>
                   updateUrl({ genreId: activeGenre.id, bookId: book.id })
                 }
@@ -527,10 +719,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
               autoFocus
             />
-            <Button
-              onClick={handleCreate}
-              disabled={isPending || !newItemName.trim()}
-            >
+            <Button onClick={handleCreate} disabled={!newItemName.trim()}>
               Create
             </Button>
             <Button variant="ghost" onClick={() => setIsAdding(false)}>
@@ -553,7 +742,8 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
               key={chapter.id}
               className={cn(
                 "hover:border-primary/50 transition-all cursor-pointer group",
-                loadingChapterDetail && "opacity-50 pointer-events-none"
+                loadingChapterDetail && "opacity-50 pointer-events-none",
+                chapter.id.startsWith("temp-") && "opacity-70"
               )}
               onClick={() =>
                 updateUrl({
