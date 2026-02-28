@@ -103,7 +103,7 @@ export function RichTextEditor({
         class: cn(
           "prose prose-sm max-w-none focus:outline-none px-3 sm:px-4 py-3",
           variant === "minimal"
-            ? "min-h-[300px] sm:prose-base prose-xl px-0 py-0"
+            ? "min-h-[300px] sm:prose-base prose-xl px-0 py-0 focus:ring-0"
             : "min-h-[200px]"
         ),
       },
@@ -138,9 +138,9 @@ export function RichTextEditor({
   return (
     <div
       className={cn(
-        "relative rounded-lg bg-white",
-        variant === "default" && "border border-gray-300",
-        variant === "minimal" && "border-none bg-transparent shadow-none"
+        "relative w-full",
+        variant === "default" && "rounded-lg bg-white border border-gray-300",
+        variant === "minimal" && "bg-transparent min-h-[calc(100vh-200px)]"
       )}
     >
       {editable && (
@@ -275,7 +275,11 @@ export function RichTextEditor({
         </div>
       )}
 
-      <div onMouseUp={updateSelectionState} onKeyUp={updateSelectionState}>
+      <div
+        onMouseUp={updateSelectionState}
+        onKeyUp={updateSelectionState}
+        className={cn(variant === "minimal" && "bg-transparent")}
+      >
         <EditorContent editor={editor} />
       </div>
 

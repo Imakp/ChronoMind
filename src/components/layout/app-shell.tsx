@@ -99,6 +99,14 @@ function SidebarContent({ year, userId, setMobileOpen }: SidebarContentProps) {
         </Link>
       </div>
 
+      {/* Year Switcher - Desktop Only */}
+      <div
+        className="hidden md:flex md:w-full px-6 mb-6"
+        data-onboarding="year-switcher"
+      >
+        <YearSwitcher userId={userId} />
+      </div>
+
       {/* Nav Links */}
       <nav className="flex-1 px-6 space-y-2" data-onboarding="navigation">
         {navigation.map((item) => {
@@ -305,7 +313,10 @@ export function AppShell({ children, year, userId }: AppShellProps) {
           <span className="font-serif font-bold text-lg">ChronoMind</span>
         </Link>
         <div className="flex items-center gap-2">
-          <YearSwitcher userId={userId} />
+          {/* Year Switcher - Mobile Only */}
+          <div className="md:hidden">
+            <YearSwitcher userId={userId} />
+          </div>
           <Button
             variant="ghost"
             size="icon"
@@ -335,13 +346,6 @@ export function AppShell({ children, year, userId }: AppShellProps) {
 
       {/* Main Content Area */}
       <main className="flex-1 md:ml-64 transition-all duration-300">
-        {/* Top bar with year switcher - positioned in top-right corner */}
-        <div className="hidden md:flex justify-end items-center p-6 border-b border-border/40 bg-background/80 backdrop-blur-sm">
-          <div data-onboarding="year-switcher">
-            <YearSwitcher userId={userId} />
-          </div>
-        </div>
-
         <div className="container max-w-5xl mx-auto px-6 py-24 md:py-12 animate-in-up space-baseline-grid-lg">
           {/* Only show AutoBreadcrumb if the section doesn't provide its own */}
           {showAutoBreadcrumb && <AutoBreadcrumb className="mb-8" />}

@@ -675,3 +675,11 @@ mark.highlight-with-tags:hover {
   @apply bg-transparent p-0;
   font-size: 0.9em; /* 90% of body text */
 }
+
+/* Remove focus outline/ring from Tiptap Editor */
+.ProseMirror:focus,
+.ProseMirror-focused {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
