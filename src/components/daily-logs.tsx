@@ -85,6 +85,7 @@ export function DailyLogs({
   const [isFocused, setIsFocused] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [forceShowEditor, setForceShowEditor] = useState(false);
 
   // Derived State
   const isDateToday = isToday(currentDate);
@@ -212,6 +213,7 @@ export function DailyLogs({
 
   // Handle creating today's entry
   const handleCreateTodayEntry = async () => {
+    setForceShowEditor(true); // Force editor to show immediately
     const today = new Date();
     setCurrentDate(today);
 
@@ -384,12 +386,12 @@ export function DailyLogs({
       <div className="separator-whitespace" />
 
       {/* Show empty state if no content exists */}
-      {!hasAnyContent && !isLoadingLog && (
+      {!hasAnyContent && !forceShowEditor && !isLoadingLog && (
         <DailyLogsEmpty year={year} onCreateEntry={handleCreateTodayEntry} />
       )}
 
       {/* 2. Content Area */}
-      {hasAnyContent && (
+      {(hasAnyContent || forceShowEditor) && (
         <div className="min-h-[60vh] relative">
           {isLoadingLog ? (
             <div className="flex flex-col items-center justify-center h-64 gap-4">
