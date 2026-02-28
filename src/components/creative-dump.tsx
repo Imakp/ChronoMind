@@ -27,7 +27,7 @@ interface CreativeNoteResponse {
   content?: unknown;
 }
 import { Button } from "./ui/button";
-import { Trash2, Hash, Sparkles, ArrowLeft } from "lucide-react";
+import { Trash2, Hash, Sparkles, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -244,8 +244,8 @@ export function CreativeDump({ yearId, initialData }: CreativeDumpProps) {
                   >
                     {/* Loading indicator */}
                     {isLoadingThis && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground/60"></div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-card/80 backdrop-blur-sm rounded-xl">
+                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                       </div>
                     )}
                     {/* Content Preview */}

@@ -32,37 +32,143 @@
 }
 
 :root {
-  /* Warm Paper Theme (2025 Academic Aesthetic) */
-  --background: 40 20% 98%; /* Warm Off-White */
-  --foreground: 220 15% 15%; /* Soft Charcoal */
-  --card: 0 0% 100%;
-  --card-foreground: 220 15% 15%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 15% 15%;
-  --primary: 220 15% 15%; /* High contrast actions */
-  --primary-foreground: 40 20% 98%;
-  --secondary: 40 10% 94%;
-  --secondary-foreground: 220 15% 15%;
-  --muted: 40 10% 92%;
-  --muted-foreground: 220 10% 45%;
-  --accent: 40 20% 95%; /* Subtle interaction state */
-  --accent-foreground: 220 15% 15%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 220 10% 90%;
-  --input: 220 10% 90%;
-  --ring: 220 15% 15%;
+  /* Modern Atelier Design System - Optimized for Performance */
+
+  /* Core HSL values - computed once for better performance */
+  --hsl-canvas: 38 30% 98%; /* Canvas - Heavy cream paper feel */
+  --hsl-ink: 215 25% 20%; /* Ink - Midnight blue-charcoal for reduced eye strain */
+  --hsl-surface: 40 25% 97%; /* Surface - Off-white that sits tonally above background */
+  --hsl-primary: 210 20% 25%; /* Deep slate for buttons and CTAs */
+  --hsl-accent: 35 60% 85%; /* Warm amber for selections and highlights */
+  --hsl-destructive: 0 65% 50%; /* Darker brick red for better contrast */
+  --hsl-border: 40 10% 88%; /* Warm limestone, barely visible boundaries */
+  --hsl-muted: 215 25% 45%; /* Muted text color */
+
+  /* Semantic color mappings - reference core values */
+  --background: var(--hsl-canvas);
+  --foreground: var(--hsl-ink);
+  --card: var(--hsl-surface);
+  --card-foreground: var(--hsl-ink);
+  --popover: var(--hsl-surface);
+  --popover-foreground: var(--hsl-ink);
+  --primary: var(--hsl-primary);
+  --primary-foreground: var(--hsl-canvas);
+  --secondary: var(--hsl-surface);
+  --secondary-foreground: var(--hsl-ink);
+  --muted: var(--hsl-surface);
+  --muted-foreground: var(--hsl-muted);
+  --accent: var(--hsl-accent);
+  --accent-foreground: var(--hsl-ink);
+  --destructive: var(--hsl-destructive);
+  --destructive-foreground: var(--hsl-canvas);
+  --border: var(--hsl-border);
+  --input: var(--hsl-border);
+  --ring: var(--hsl-accent);
   --radius: 0.5rem;
+
+  /* Optimized spacing system - 4px/8px baseline grid */
+  --space-1: 0.25rem; /* 4px */
+  --space-2: 0.5rem; /* 8px */
+  --space-3: 0.75rem; /* 12px */
+  --space-4: 1rem; /* 16px */
+  --space-6: 1.5rem; /* 24px - preferred over 16px */
+  --space-8: 2rem; /* 32px */
+  --space-12: 3rem; /* 48px */
+
+  /* Hierarchy indentation */
+  --hierarchy-indent: var(--space-6); /* 24px per level */
+
+  /* Reading container width */
+  --reading-width: 65ch;
+
+  /* Performance-optimized transition system */
+  --transition-fast: 150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --transition-normal: 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --transition-slow: 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Legacy support - maintain existing variable names */
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-3);
+  --spacing-lg: var(--space-4);
+  --spacing-xl: var(--space-6);
+  --spacing-2xl: var(--space-8);
+  --spacing-3xl: var(--space-12);
+  --transition-duration: var(--transition-normal);
+  --transition-easing: cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground selection:bg-primary/20 selection:text-foreground;
+    @apply bg-background text-foreground selection:bg-accent/30 selection:text-foreground;
+    /* Never use pure black text - use foreground with opacity */
+    color: hsl(var(--foreground) / 0.9);
   }
-  /* Smooth Typography for Reading */
+
+  /* Enhanced focus system with better accessibility */
+  *:focus {
+    outline: none;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-offset-2 ring-2 ring-accent/50;
+    transition: box-shadow var(--transition-fast);
+  }
+
+  /* High contrast focus for better accessibility */
+  @media (prefers-contrast: high) {
+    *:focus-visible {
+      @apply ring-4 ring-primary ring-offset-4;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Screen reader only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  /* Skip link styling */
+  .skip-link {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50;
+    @apply focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground;
+    @apply focus:rounded-md focus:shadow-lg focus:ring-2 focus:ring-accent;
+  }
+
+  /* Modern Atelier Typography System */
   h1,
   h2,
   h3,
@@ -70,60 +176,365 @@
   h5,
   h6 {
     @apply font-serif tracking-tight;
+    /* Use Lora for all headings */
+    font-family: var(--font-serif);
+    /* Avoid pure black, use foreground color */
+    color: hsl(var(--foreground));
+  }
+
+  /* Typography sizing and spacing rules */
+  h1,
+  h2,
+  h3 {
+    /* Larger headings get tighter letter spacing */
+    letter-spacing: -0.02em;
+  }
+
+  /* Long-form reading content gets increased line-height */
+  .prose,
+  .reading-content,
+  article {
+    line-height: 1.6;
+  }
+
+  /* Monospace text (tags, dates, code) gets reduced size */
+  code,
+  .mono,
+  .tag,
+  .timestamp {
+    font-family: var(--font-mono);
+    font-size: 0.9em; /* 90% of body text */
+  }
+
+  /* Baseline grid and spacing - 4px/8px increments */
+  .container {
+    max-width: var(--reading-width);
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+
+  /* Apply baseline grid spacing throughout application */
+  .space-baseline-grid > * + * {
+    margin-top: var(--space-2); /* 8px */
+  }
+
+  .space-baseline-grid-lg > * + * {
+    margin-top: var(--space-6); /* 24px */
+  }
+
+  /* Reading container with 65ch width limit and centered layout */
+  .reading-container {
+    max-width: var(--reading-width);
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+  }
+
+  /* Remove separator lines in favor of whitespace */
+  .separator-whitespace {
+    border: none;
+    height: var(--space-6); /* 24px of whitespace instead of visible line */
+  }
+
+  /* Enhanced button accessibility */
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* Improved link accessibility */
+  a:not([class]) {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 0.125em;
+  }
+
+  a:not([class]):hover {
+    color: hsl(var(--primary) / 0.8);
+  }
+
+  /* Form accessibility improvements */
+  input:invalid,
+  select:invalid,
+  textarea:invalid {
+    border-color: hsl(var(--destructive));
+    box-shadow: 0 0 0 1px hsl(var(--destructive) / 0.2);
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    :root {
+      --hsl-ink: 0 0% 0%;
+      --hsl-canvas: 0 0% 100%;
+      --hsl-border: 0 0% 50%;
+    }
   }
 }
 
-/* 2025 Micro-Interaction Classes */
+/* Modern Atelier Micro-Interaction Classes */
 @layer utilities {
-  .hover-elevate {
-    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-md;
+  /* Tactile button interactions */
+  .btn-tactile {
+    transition: all var(--transition-normal);
   }
+
+  .btn-tactile:hover {
+    /* Shift background color rather than just opacity */
+    background-color: hsl(var(--primary) / 0.9);
+  }
+
+  .btn-tactile:active {
+    /* 1px vertical translation for tactile feedback */
+    transform: translateY(1px);
+  }
+
+  /* Card elevation without harsh borders */
+  .card-elevated {
+    /* Compound shadow approach with soft edges */
+    box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.05),
+      0 0 0 1px rgba(0, 0, 0, 0.03);
+    border: none;
+    background-color: hsl(var(--surface));
+  }
+
+  /* Input underline variant for writing contexts */
+  .input-underline {
+    border: none;
+    border-bottom: 2px solid hsl(var(--border));
+    border-radius: 0;
+    background: transparent;
+    transition: border-color var(--transition-normal);
+  }
+
+  .input-underline:focus {
+    border-bottom-color: hsl(var(--primary));
+  }
+
+  /* Hierarchical content styling */
+  .hierarchy-level-1 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 1.25rem; /* 20px */
+    color: hsl(var(--foreground));
+  }
+
+  .hierarchy-level-2 {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 1rem; /* 16px */
+    color: hsl(var(--foreground) / 0.7); /* 30% lighter */
+    padding-left: var(--hierarchy-indent);
+  }
+
+  .hierarchy-level-3 {
+    font-family: var(--font-sans);
+    font-weight: 400;
+    font-size: 0.875rem; /* 14px */
+    color: hsl(var(--foreground) / 0.55); /* 45% lighter */
+    padding-left: calc(var(--hierarchy-indent) * 2);
+  }
+
+  /* Hierarchical connectors */
+  .hierarchy-connector {
+    border-left: 1px solid hsl(var(--border));
+    margin-left: var(--space-4);
+    padding-left: var(--space-4);
+  }
+
+  /* Progress bars with warm amber fill */
+  .progress-bar {
+    background-color: hsl(var(--border));
+    height: 8px;
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    background-color: hsl(var(--accent));
+    height: 100%;
+    transition: width var(--transition-normal);
+  }
+
+  /* Tag pills for hover display */
+  .tag-pill {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--foreground));
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    transition: opacity var(--transition-normal);
+  }
+
+  /* Smooth animations */
   .animate-in-up {
-    @apply animate-in slide-in-from-bottom-4 fade-in duration-500;
+    @apply animate-in slide-in-from-bottom-4 fade-in;
+    animation-duration: var(--transition-normal);
+    animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  /* Loading states that prevent layout shift */
+  .loading-skeleton {
+    background-color: hsl(var(--muted));
+    border-radius: 0.25rem;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* Warm gray loading blocks instead of cool blue/gray */
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Onboarding highlight effect */
+  .onboarding-highlight {
+    position: relative;
+    z-index: 45;
+    box-shadow: 0 0 0 4px hsl(var(--accent) / 0.3),
+      0 0 0 8px hsl(var(--accent) / 0.1);
+    border-radius: 8px;
+    transition: box-shadow var(--transition-normal);
+  }
+
+  /* Optimized spacing utilities following baseline grid */
+  .space-1 {
+    margin: var(--space-1);
+  }
+  .space-2 {
+    margin: var(--space-2);
+  }
+  .space-3 {
+    margin: var(--space-3);
+  }
+  .space-4 {
+    margin: var(--space-4);
+  }
+  .space-6 {
+    margin: var(--space-6);
+  }
+  .space-8 {
+    margin: var(--space-8);
+  }
+  .space-12 {
+    margin: var(--space-12);
+  }
+
+  /* Legacy spacing support */
+  .space-baseline {
+    margin: var(--space-1);
+  }
+  .space-baseline-2 {
+    margin: var(--space-2);
+  }
+  .space-baseline-3 {
+    margin: var(--space-3);
+  }
+  .space-baseline-4 {
+    margin: var(--space-4);
+  }
+  .space-baseline-6 {
+    margin: var(--space-6);
+  }
+  .space-baseline-8 {
+    margin: var(--space-8);
+  }
+  .space-baseline-12 {
+    margin: var(--space-12);
+  }
+
+  /* Accessibility utilities */
+  .focus-ring {
+    @apply focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2;
+    transition: box-shadow var(--transition-fast);
+  }
+
+  .focus-ring-inset {
+    @apply focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent;
+    transition: box-shadow var(--transition-fast);
+  }
+
+  /* Interactive element states */
+  .interactive {
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .interactive:hover {
+    transform: translateY(-1px);
+  }
+
+  .interactive:active {
+    transform: translateY(0);
+  }
+
+  /* High contrast mode adjustments */
+  @media (prefers-contrast: high) {
+    .card-elevated {
+      border: 2px solid hsl(var(--border));
+    }
+
+    .tag-pill {
+      border: 1px solid hsl(var(--foreground));
+    }
   }
 }
 
-/* Tiptap Editor Styles */
+/* Tiptap Editor Styles - Modern Atelier */
 .ProseMirror {
-  @apply outline-none font-serif text-lg leading-relaxed text-foreground/90;
+  @apply outline-none font-serif text-lg leading-relaxed;
+  /* Never use pure black text */
+  color: hsl(var(--foreground) / 0.9);
+  line-height: 1.6; /* Increased line-height for long-form reading */
 }
 
 .ProseMirror p.is-editor-empty:first-child::before {
-  @apply text-muted-foreground/50 content-[attr(data-placeholder)] float-left h-0 pointer-events-none italic;
+  @apply pointer-events-none italic float-left h-0;
+  color: hsl(var(--muted-foreground) / 0.5);
+  content: attr(data-placeholder);
 }
 
-/* Highlight with Tags Styles */
+/* Highlight with Tags Styles - Modern Atelier Colors */
 mark.highlight-with-tags {
-  background-color: #fef08a;
+  background-color: hsl(var(--accent) / 0.6); /* Warm amber */
   padding: 2px 0;
   border-radius: 2px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-normal);
+  position: relative;
 }
 
 mark.highlight-with-tags:hover {
-  background-color: #fde047;
+  background-color: hsl(var(--accent) / 0.8);
 }
 
 .dark mark.highlight-with-tags {
-  background-color: #854d0e;
-  color: #fef3c7;
+  background-color: hsl(var(--accent) / 0.3);
+  color: hsl(var(--foreground));
 }
 
 .dark mark.highlight-with-tags:hover {
-  background-color: #a16207;
+  background-color: hsl(var(--accent) / 0.4);
 }
 
-/* OPTIMIZATION: Mobile-Responsive Tiptap Prose Styles */
+/* Modern Atelier Responsive Prose Styles */
 .prose {
-  max-width: 100%;
+  max-width: var(--reading-width); /* 65ch limit for reading containers */
+  margin: 0 auto; /* Centered layout */
 }
 
-/* OPTIMIZATION: Responsive base text size and line height */
+/* Typography with Modern Atelier hierarchy */
 .prose p {
   margin-top: 0.75em;
   margin-bottom: 0.75em;
-  @apply text-sm sm:text-base leading-relaxed;
+  @apply text-sm sm:text-base;
+  line-height: 1.6; /* Increased line-height for long-form reading */
+  /* Never use pure black text */
+  color: hsl(var(--foreground) / 0.9);
 }
 
 .prose h1,
@@ -133,22 +544,26 @@ mark.highlight-with-tags:hover {
   margin-bottom: 0.75em;
   font-weight: 600;
   @apply leading-tight;
+  font-family: var(--font-serif); /* Lora for headings */
+  color: hsl(var(--foreground));
 }
 
-/* OPTIMIZATION: Responsive heading sizes - smaller on mobile, larger on desktop */
+/* Larger headings get tighter letter spacing */
 .prose h1 {
   @apply text-xl sm:text-2xl lg:text-3xl;
+  letter-spacing: -0.02em;
 }
 
 .prose h2 {
   @apply text-lg sm:text-xl lg:text-2xl;
+  letter-spacing: -0.02em;
 }
 
 .prose h3 {
   @apply text-base sm:text-lg lg:text-xl;
 }
 
-/* OPTIMIZATION: Responsive list spacing and indentation */
+/* List styling with proper spacing */
 .prose ul,
 .prose ol {
   margin-top: 0.75em;
@@ -168,65 +583,75 @@ mark.highlight-with-tags:hover {
   margin-top: 0.25em;
   margin-bottom: 0.25em;
   @apply text-sm sm:text-base;
+  color: hsl(var(--foreground) / 0.9);
 }
 
 .prose strong {
   font-weight: 600;
+  color: hsl(var(--foreground));
 }
 
 .prose em {
   font-style: italic;
 }
 
-/* OPTIMIZATION: Responsive code block sizing */
+/* Monospace content - 90% of body text size */
 .prose code {
-  background-color: #f3f4f6;
+  background-color: hsl(var(--muted));
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
   @apply text-xs sm:text-sm;
+  font-family: var(--font-mono); /* JetBrains Mono */
+  font-size: 0.9em; /* 90% of body text */
 }
 
 .dark .prose code {
-  background-color: #374151;
+  background-color: hsl(var(--muted) / 0.8);
 }
 
-/* OPTIMIZATION: Better mobile touch targets for links */
+/* Links with Modern Atelier colors */
 .prose a {
-  @apply text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300;
-  @apply underline decoration-1 underline-offset-2;
-  @apply py-1; /* Increased touch target */
+  color: hsl(var(--primary));
+  @apply underline decoration-1 underline-offset-2 py-1;
+  transition: color var(--transition-normal);
 }
 
-/* OPTIMIZATION: Responsive blockquote styling */
+.prose a:hover {
+  color: hsl(var(--primary) / 0.8);
+}
+
+/* Blockquotes with warm styling */
 .prose blockquote {
-  @apply border-l-4 border-gray-300 dark:border-gray-600;
-  @apply pl-3 sm:pl-4 italic text-gray-700 dark:text-gray-300;
+  border-left: 4px solid hsl(var(--accent));
+  @apply pl-3 sm:pl-4 italic;
   @apply my-4 text-sm sm:text-base;
+  color: hsl(var(--foreground) / 0.7);
 }
 
-/* OPTIMIZATION: Better table responsiveness */
+/* Tables with Modern Atelier styling */
 .prose table {
-  @apply w-full text-xs sm:text-sm;
-  @apply border-collapse;
+  @apply w-full text-xs sm:text-sm border-collapse;
 }
 
 .prose th,
 .prose td {
-  @apply border border-gray-300 dark:border-gray-600;
+  border: 1px solid hsl(var(--border));
   @apply px-2 sm:px-3 py-1 sm:py-2;
 }
 
 .prose th {
-  @apply bg-gray-100 dark:bg-gray-800 font-semibold;
+  background-color: hsl(var(--muted));
+  @apply font-semibold;
+  color: hsl(var(--foreground));
 }
 
-/* OPTIMIZATION: Responsive horizontal rule */
+/* Horizontal rules with warm styling */
 .prose hr {
-  @apply border-gray-300 dark:border-gray-600;
+  border-color: hsl(var(--border));
   @apply my-6 sm:my-8;
 }
 
-/* OPTIMIZATION: Better spacing on mobile for nested lists */
+/* Nested lists with proper spacing */
 .prose ul ul,
 .prose ol ul,
 .prose ul ol,
@@ -234,19 +659,19 @@ mark.highlight-with-tags:hover {
   @apply mt-2 mb-2;
 }
 
-/* OPTIMIZATION: Ensure images are responsive */
+/* Responsive images */
 .prose img {
-  @apply max-w-full h-auto rounded-lg;
-  @apply my-4;
+  @apply max-w-full h-auto rounded-lg my-4;
 }
 
-/* OPTIMIZATION: Better pre/code block handling on mobile */
+/* Code blocks with Modern Atelier styling */
 .prose pre {
-  @apply overflow-x-auto text-xs sm:text-sm;
-  @apply p-3 sm:p-4 rounded-lg;
-  @apply bg-gray-100 dark:bg-gray-800;
+  @apply overflow-x-auto text-xs sm:text-sm p-3 sm:p-4 rounded-lg;
+  background-color: hsl(var(--muted));
+  font-family: var(--font-mono);
 }
 
 .prose pre code {
   @apply bg-transparent p-0;
+  font-size: 0.9em; /* 90% of body text */
 }

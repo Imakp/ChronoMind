@@ -65,21 +65,20 @@ const SheetContent = ({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 bg-black/80 animate-in fade-in duration-300"
+        className="fixed inset-0 z-50 bg-black/50 animate-in fade-in duration-300 ease-out"
         onClick={() => context.onOpenChange(false)}
       />
 
       {/* Sheet */}
       <div
         className={cn(
-          "fixed z-50 gap-4 bg-background p-6 shadow-lg transition ease-in-out duration-300 animate-in",
+          "fixed z-50 gap-4 bg-card p-8 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.05)] transition ease-out duration-300 animate-in border-none",
           side === "left" &&
-            "inset-y-0 left-0 h-full w-3/4 border-r sm:max-w-sm slide-in-from-left",
+            "inset-y-0 left-0 h-full w-3/4 sm:max-w-sm slide-in-from-left",
           side === "right" &&
-            "inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm slide-in-from-right",
-          side === "top" && "inset-x-0 top-0 border-b slide-in-from-top",
-          side === "bottom" &&
-            "inset-x-0 bottom-0 border-t slide-in-from-bottom",
+            "inset-y-0 right-0 h-full w-3/4 sm:max-w-sm slide-in-from-right",
+          side === "top" && "inset-x-0 top-0 slide-in-from-top",
+          side === "bottom" && "inset-x-0 bottom-0 slide-in-from-bottom",
           className
         )}
       >
@@ -95,7 +94,7 @@ const SheetHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
+      "flex flex-col space-y-3 text-center sm:text-left mb-6",
       className
     )}
     {...props}
@@ -109,7 +108,10 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("text-lg font-semibold text-foreground", className)}
+    className={cn(
+      "text-xl font-serif font-semibold text-foreground tracking-tight",
+      className
+    )}
     {...props}
   />
 ));

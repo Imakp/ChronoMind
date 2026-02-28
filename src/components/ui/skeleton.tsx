@@ -6,7 +6,11 @@ function Skeleton({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-gray-200", className)}
+      className={cn(
+        "animate-pulse rounded-md bg-muted border border-border/20",
+        "loading-skeleton", // Use the warm gray loading blocks from globals.css
+        className
+      )}
       {...props}
     />
   );

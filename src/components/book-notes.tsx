@@ -38,7 +38,18 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { EditorWithPersistence } from "@/components/editor/editor-with-persistence";
+import {
+  Breadcrumb,
+  generateBreadcrumbs,
+} from "@/components/navigation/breadcrumb";
 import { cn } from "@/lib/utils";
+import {
+  HierarchyItem,
+  HierarchyContainer,
+  HierarchyGroup,
+} from "@/components/ui/hierarchy";
+import { QuickAddForm } from "@/components/ui/quick-add-form";
+import { HierarchicalQuickAdd } from "@/components/ui/hierarchical-quick-add";
 
 interface BookNotesProps {
   yearId: string;
@@ -65,7 +76,7 @@ const getBookColor = (id: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-export function BookNotes({ yearId, initialData }: BookNotesProps) {
+export function BookNotes({ yearId, year, initialData }: BookNotesProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -107,7 +118,6 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
 
   // UI States (Creation)
   const [isAdding, setIsAdding] = useState(false);
-  const [newItemName, setNewItemName] = useState("");
 
   // Zen Mode / Editor States (Ported from DailyLogs)
   const [isFocused, setIsFocused] = useState(false);
@@ -120,6 +130,21 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   useEffect(() => {
     setGenres(initialData || []);
   }, [initialData]);
+
+  // Listen for keyboard shortcut events
+  useEffect(() => {
+    const handleNewEntry = () => setIsAdding(true);
+
+    window.addEventListener("trigger-new-genre", handleNewEntry);
+    window.addEventListener("trigger-new-book", handleNewEntry);
+    window.addEventListener("trigger-new-book-notes", handleNewEntry);
+
+    return () => {
+      window.removeEventListener("trigger-new-genre", handleNewEntry);
+      window.removeEventListener("trigger-new-book", handleNewEntry);
+      window.removeEventListener("trigger-new-book-notes", handleNewEntry);
+    };
+  }, []);
 
   // Fetch Book Details when URL bookId changes
   useEffect(() => {
@@ -205,18 +230,15 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
 
   // --- 4. Handlers ---
 
-  const handleCreate = async () => {
-    const name = newItemName.trim();
-    if (!name) return;
+  const handleCreate = async (name: string) => {
+    if (!name.trim()) return;
 
-    // 1. Clear input immediately for responsiveness
-    setNewItemName("");
-    setIsAdding(false);
+    // Generate temporary ID
+    const tempId = `temp-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
 
-    // 2. Generate temporary ID
-    const tempId = `temp-${Date.now()}`;
-
-    // 3. Optimistically update state based on view
+    // Optimistically update state based on view
     if (view === "genres") {
       const optimisticGenre = {
         id: tempId,
@@ -228,11 +250,11 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
       // Add to local state immediately
       setGenres((prev) => [...prev, optimisticGenre]);
 
-      // 4. Perform server action
+      // Perform server action
       const res = await createGenre(yearId, name);
 
       if (res.success && res.data) {
-        // 5. Swap temp ID with real ID from server - cast to match LibraryMetadata type
+        // Swap temp ID with real ID from server
         const serverGenre = {
           id: res.data.id,
           name: res.data.name,
@@ -245,58 +267,6 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
       } else {
         // Rollback on failure
         setGenres((prev) => prev.filter((g) => g.id !== tempId));
-        // TODO: Show toast error notification
-      }
-    } else if (view === "books" && activeGenre) {
-      const optimisticBook = {
-        id: tempId,
-        title: name,
-        genreId: activeGenre.id,
-        chapters: [],
-        _count: { chapters: 0 },
-      };
-
-      // Update the genres tree to include the new book
-      setGenres((prev) =>
-        prev.map((g) => {
-          if (g.id === activeGenre.id) {
-            return { ...g, books: [...g.books, optimisticBook] };
-          }
-          return g;
-        })
-      );
-
-      const res = await createBook(activeGenre.id, name);
-
-      if (res.success && res.data) {
-        setGenres((prev) =>
-          prev.map((g) => {
-            if (g.id === activeGenre.id) {
-              // Cast server response to match BookMetadata type
-              const serverBook = {
-                id: res.data.id,
-                title: res.data.title,
-                genreId: res.data.genreId,
-                _count: { chapters: 0 },
-              };
-              return {
-                ...g,
-                books: g.books.map((b) => (b.id === tempId ? serverBook : b)),
-              };
-            }
-            return g;
-          })
-        );
-      } else {
-        // Rollback
-        setGenres((prev) =>
-          prev.map((g) =>
-            g.id === activeGenre.id
-              ? { ...g, books: g.books.filter((b) => b.id !== tempId) }
-              : g
-          )
-        );
-        // TODO: Show toast error notification
       }
     } else if (view === "chapters" && activeBook) {
       const optimisticChapter: ChapterMetadata = {
@@ -323,7 +293,6 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
       if (res.success && res.data) {
         setActiveBookData((prev) => {
           if (!prev) return null;
-          // Cast server response to match ChapterMetadata type
           const chapter = res.data as Chapter;
           const serverChapter: ChapterMetadata = {
             id: chapter.id,
@@ -347,11 +316,10 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
             chapters: prev.chapters.filter((c) => c.id !== tempId),
           };
         });
-        // TODO: Show toast error notification
       }
     }
 
-    // 6. Finally refresh router to ensure server cache is in sync
+    // Finally refresh router to ensure server cache is in sync
     router.refresh();
   };
 
@@ -436,62 +404,48 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   );
 
   // --- 5. Breadcrumbs Component ---
-  const Breadcrumbs = () => (
-    <nav className="flex items-center gap-1.5 text-sm text-muted-foreground overflow-x-auto">
-      <button
-        onClick={() =>
-          updateUrl({ genreId: null, bookId: null, chapterId: null })
-        }
-        className="hover:text-foreground transition-colors font-medium whitespace-nowrap"
-      >
-        Library
-      </button>
-      {activeGenre && (
-        <>
-          <ChevronRight className="w-4 h-4 shrink-0" />
-          <button
-            onClick={() => updateUrl({ bookId: null, chapterId: null })}
-            className={cn(
-              "hover:text-foreground transition-colors whitespace-nowrap",
-              view === "books" && "font-semibold text-foreground"
-            )}
-          >
-            {activeGenre.name}
-          </button>
-        </>
-      )}
-      {activeBook && (
-        <>
-          <ChevronRight className="w-4 h-4 shrink-0" />
-          <button
-            onClick={() => updateUrl({ chapterId: null })}
-            className={cn(
-              "hover:text-foreground transition-colors whitespace-nowrap",
-              view === "chapters" && "font-semibold text-foreground"
-            )}
-          >
-            {activeBook.title}
-          </button>
-        </>
-      )}
-      {activeChapter && (
-        <>
-          <ChevronRight className="w-4 h-4 shrink-0" />
-          <span className="font-semibold text-foreground truncate max-w-[150px]">
-            {activeChapter.title}
-          </span>
-        </>
-      )}
-    </nav>
-  );
+  const getBreadcrumbs = () => {
+    const hierarchy: Array<{ label: string; path?: string }> = [];
+
+    // REMOVED: Redundant "Library" item that caused duplicate key error
+    // The "Book Notes" section breadcrumb is already added by generateBreadcrumbs
+
+    if (activeGenre) {
+      hierarchy.push({
+        label: activeGenre.name,
+        path: `${pathname.split("?")[0]}?genreId=${activeGenre.id}`,
+      });
+    }
+
+    if (activeBook) {
+      hierarchy.push({
+        label: activeBook.title,
+        path: `${pathname.split("?")[0]}?genreId=${activeGenre?.id}&bookId=${
+          activeBook.id
+        }`,
+      });
+    }
+
+    if (activeChapter) {
+      hierarchy.push({
+        label: activeChapter.title,
+        // Current page - no path needed
+      });
+    }
+
+    return generateBreadcrumbs(year, "book-notes", hierarchy);
+  };
 
   // --- RENDER VIEWS ---
 
   // 1. GENRES VIEW
   if (view === "genres") {
     return (
-      <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500">
+        {/* ADD THIS: Render breadcrumbs even on the root view */}
+        <Breadcrumb items={getBreadcrumbs()} className="mb-8" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div>
             <h2 className="font-serif text-3xl font-medium text-foreground tracking-tight">
               Library
@@ -509,24 +463,17 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
         </div>
 
         {isAdding && (
-          <div className="bg-card border border-border p-4 rounded-lg flex gap-2 animate-in fade-in slide-in-from-top-2">
-            <Input
-              placeholder="Genre Name"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              autoFocus
-            />
-            <Button onClick={handleCreate} disabled={!newItemName.trim()}>
-              Create
-            </Button>
-            <Button variant="ghost" onClick={() => setIsAdding(false)}>
-              Cancel
-            </Button>
-          </div>
+          <QuickAddForm
+            placeholder="Genre Name"
+            buttonText="Create"
+            onSubmit={handleCreate}
+            onCancel={() => setIsAdding(false)}
+            isExpanded={isAdding}
+            onToggle={setIsAdding}
+          />
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {genres.length === 0 && !isAdding && (
             <div className="col-span-full text-center py-16 border-2 border-dashed border-border/50 rounded-xl">
               <Library className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -550,9 +497,12 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                     <Library className="w-6 h-6 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
                   <div>
-                    <h3 className="font-serif text-lg font-medium">
+                    <HierarchyItem
+                      level={1}
+                      className="font-serif text-lg font-medium"
+                    >
                       {genre.name}
-                    </h3>
+                    </HierarchyItem>
                     <p className="text-xs text-muted-foreground">
                       {genre.books.length} Books
                     </p>
@@ -584,8 +534,8 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   if (view === "books" && activeGenre) {
     return (
       <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-        <Breadcrumbs />
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <Breadcrumb items={getBreadcrumbs()} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <h2 className="font-serif text-3xl font-medium">
             {activeGenre.name}
           </h2>
@@ -598,21 +548,87 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
         </div>
 
         {isAdding && (
-          <div className="bg-card border border-border p-4 rounded-lg flex gap-2 animate-in fade-in slide-in-from-top-2">
-            <Input
-              placeholder="Book Title"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              autoFocus
-            />
-            <Button onClick={handleCreate} disabled={!newItemName.trim()}>
-              Create
-            </Button>
-            <Button variant="ghost" onClick={() => setIsAdding(false)}>
-              Cancel
-            </Button>
-          </div>
+          <HierarchicalQuickAdd
+            title="New Book"
+            placeholder="Book Title"
+            childPlaceholder="Add a chapter..."
+            allowChildren={true}
+            childrenLabel="chapters"
+            maxChildren={20}
+            onSubmit={async (title, chapters) => {
+              // Create the book first
+              const tempId = `temp-book-${Date.now()}-${Math.random()
+                .toString(36)
+                .substr(2, 9)}`;
+              const optimisticBook = {
+                id: tempId,
+                title,
+                genreId: activeGenre.id,
+                chapters: [],
+                _count: { chapters: 0 },
+              };
+
+              // Update the genres tree to include the new book
+              setGenres((prev) =>
+                prev.map((g) => {
+                  if (g.id === activeGenre.id) {
+                    return { ...g, books: [...g.books, optimisticBook] };
+                  }
+                  return g;
+                })
+              );
+
+              const res = await createBook(activeGenre.id, title);
+
+              if (res.success && res.data) {
+                const realBook = res.data;
+
+                setGenres((prev) =>
+                  prev.map((g) => {
+                    if (g.id === activeGenre.id) {
+                      const serverBook = {
+                        id: realBook.id,
+                        title: realBook.title,
+                        genreId: realBook.genreId,
+                        _count: { chapters: 0 },
+                      };
+                      return {
+                        ...g,
+                        books: g.books.map((b) =>
+                          b.id === tempId ? serverBook : b
+                        ),
+                      };
+                    }
+                    return g;
+                  })
+                );
+
+                // If chapters were provided, create them
+                if (chapters && chapters.length > 0) {
+                  for (const chapter of chapters) {
+                    await createChapter(realBook.id, chapter, {
+                      type: "doc",
+                      content: [],
+                    });
+                  }
+                }
+
+                router.refresh();
+              } else {
+                // Rollback
+                setGenres((prev) =>
+                  prev.map((g) =>
+                    g.id === activeGenre.id
+                      ? { ...g, books: g.books.filter((b) => b.id !== tempId) }
+                      : g
+                  )
+                );
+              }
+            }}
+            onCancel={() => setIsAdding(false)}
+            isExpanded={isAdding}
+            onToggle={setIsAdding}
+          />
         )}
 
         <div
@@ -660,9 +676,12 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                   </button>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                  <HierarchyItem
+                    level={2}
+                    className="truncate group-hover:text-primary transition-colors"
+                  >
                     {book.title}
-                  </p>
+                  </HierarchyItem>
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                     <FileText className="w-3 h-3" />
                     <span>{book._count.chapters} Chapters</span>
@@ -680,8 +699,8 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   if (view === "chapters" && activeBook) {
     const coverStyle = getBookColor(activeBook.id);
     return (
-      <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-        <Breadcrumbs />
+      <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+        <Breadcrumb items={getBreadcrumbs()} />
 
         {/* Book Header Card */}
         <div className="bg-card border border-border rounded-xl p-6 flex flex-col sm:flex-row items-start gap-6 shadow-sm">
@@ -711,21 +730,14 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
         </div>
 
         {isAdding && (
-          <div className="bg-card border border-border p-4 rounded-lg flex gap-2 animate-in fade-in slide-in-from-top-2">
-            <Input
-              placeholder="Chapter Title"
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              autoFocus
-            />
-            <Button onClick={handleCreate} disabled={!newItemName.trim()}>
-              Create
-            </Button>
-            <Button variant="ghost" onClick={() => setIsAdding(false)}>
-              Cancel
-            </Button>
-          </div>
+          <QuickAddForm
+            placeholder="Chapter Title"
+            buttonText="Create"
+            onSubmit={handleCreate}
+            onCancel={() => setIsAdding(false)}
+            isExpanded={isAdding}
+            onToggle={setIsAdding}
+          />
         )}
 
         <div className="space-y-2">
@@ -758,9 +770,12 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                   <span className="font-mono text-muted-foreground/50 text-sm w-6 font-medium">
                     {(index + 1).toString().padStart(2, "0")}
                   </span>
-                  <span className="font-medium text-foreground group-hover:text-primary transition-colors">
+                  <HierarchyItem
+                    level={3}
+                    className="group-hover:text-primary transition-colors"
+                  >
                     {chapter.title}
-                  </span>
+                  </HierarchyItem>
                   {chapter._count.highlights > 0 && (
                     <Badge variant="secondary" className="text-xs">
                       {chapter._count.highlights} highlights
@@ -792,7 +807,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
   // 4. EDITOR VIEW (Zen Mode Implementation)
   if (view === "editor") {
     return (
-      <div className="max-w-4xl mx-auto pb-20">
+      <div className="max-w-6xl mx-auto pb-20">
         {/* Header & Breadcrumbs (Blurred when focused) */}
         <div
           className={cn(
@@ -811,7 +826,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <Breadcrumbs />
+            <Breadcrumb items={getBreadcrumbs()} />
           </div>
 
           <div className="flex items-start justify-between">
@@ -845,8 +860,7 @@ export function BookNotes({ yearId, initialData }: BookNotesProps) {
                 isFocused
                   ? "scale-[1.02] bg-background z-20 min-h-[70vh] py-12"
                   : "scale-100",
-                !isFocused &&
-                  "hover:bg-secondary/5 rounded-xl border border-transparent hover:border-border/40 p-4 -mx-4"
+                !isFocused && "hover:bg-secondary/5 rounded-xl p-4 -mx-4"
               )}
               onFocus={() => !isFocused && setIsFocused(true)}
             >

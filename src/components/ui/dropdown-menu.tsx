@@ -97,7 +97,7 @@ const DropdownMenuContent = ({
     <div
       ref={ref}
       className={cn(
-        "absolute z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80 mt-2",
+        "absolute z-50 min-w-[8rem] overflow-hidden rounded-lg border-none bg-popover p-2 text-popover-foreground shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.05)] animate-in fade-in-80 duration-300 mt-2",
         align === "end" && "right-0",
         align === "start" && "left-0",
         align === "center" && "left-1/2 -translate-x-1/2",
@@ -122,7 +122,7 @@ const DropdownMenuItem = ({
   return (
     <button
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:pointer-events-none disabled:opacity-50",
+        "relative flex w-full cursor-pointer select-none items-center rounded-md px-3 py-2 text-sm outline-none transition-colors duration-300 ease-out hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground disabled:pointer-events-none disabled:opacity-50",
         className
       )}
       {...props}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +16,8 @@ import { createYear } from "@/lib/actions";
 import type { Year } from "@prisma/client";
 import { Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { FirstYearFlow } from "@/components/onboarding/first-year-flow";
+import { useOnboarding } from "@/components/providers/onboarding-provider";
 
 interface YearSelectorProps {
   currentYear?: number;
@@ -33,6 +35,17 @@ export default function YearSelector({
   );
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { state } = useOnboarding();
+
+  // Show first-year flow for new users
+  const [showFirstYearFlow, setShowFirstYearFlow] = useState(false);
+
+  useEffect(() => {
+    // Show first-year flow if user has no years and is a first-time visitor
+    if (availableYears.length === 0 && state.isFirstVisit) {
+      setShowFirstYearFlow(true);
+    }
+  }, [availableYears.length, state.isFirstVisit]);
 
   // Generate options for the dropdown (Current Year ± 5)
   const currentYearValue = new Date().getFullYear();
@@ -111,6 +124,13 @@ export default function YearSelector({
           </Card>
         </button>
       </div>
+
+      {/* First Year Flow */}
+      <FirstYearFlow
+        userId={userId}
+        isOpen={showFirstYearFlow}
+        onClose={() => setShowFirstYearFlow(false)}
+      />
 
       {/* Creation Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

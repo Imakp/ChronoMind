@@ -69,7 +69,7 @@ const AccordionItem = React.forwardRef<
   <AccordionItemContext.Provider value={{ value }}>
     <div
       ref={ref}
-      className={cn("border-b", className)}
+      className={cn("border-b border-border/50", className)}
       data-value={value}
       {...props}
     >
@@ -96,7 +96,7 @@ const AccordionTrigger = React.forwardRef<
     <button
       ref={ref}
       className={cn(
-        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180",
+        "flex flex-1 items-center justify-between py-6 font-serif font-medium transition-all duration-300 ease-out hover:text-primary [&[data-state=open]>svg]:rotate-180",
         className
       )}
       data-state={isOpen ? "open" : "closed"}
@@ -104,7 +104,7 @@ const AccordionTrigger = React.forwardRef<
       {...props}
     >
       {children}
-      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
+      <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-300 ease-out" />
     </button>
   );
 });
@@ -130,12 +130,12 @@ const AccordionContent = React.forwardRef<
       ref={ref}
       data-state={isOpen ? "open" : "closed"}
       className={cn(
-        "overflow-hidden text-sm transition-all data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down",
+        "overflow-hidden text-sm transition-all duration-300 ease-out data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down",
         className
       )}
       {...props}
     >
-      <div className="pb-4 pt-0">{children}</div>
+      <div className="pb-6 pt-0">{children}</div>
     </div>
   );
 });

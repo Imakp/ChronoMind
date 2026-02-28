@@ -36,7 +36,7 @@ const DialogContent = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "relative bg-card border border-border rounded-lg shadow-lg p-6 w-full max-w-lg mx-4",
+      "relative bg-card border-none rounded-lg shadow-[0_8px_32px_-8px_rgba(0,0,0,0.12),0_0_0_1px_rgba(0,0,0,0.05)] p-8 w-full max-w-lg mx-4 transition-all duration-300 ease-out",
       className
     )}
     {...props}
@@ -50,7 +50,7 @@ const DialogHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 mb-4", className)} {...props} />
+  <div className={cn("flex flex-col space-y-3 mb-6", className)} {...props} />
 );
 DialogHeader.displayName = "DialogHeader";
 
@@ -74,7 +74,10 @@ const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn("text-lg font-semibold text-foreground", className)}
+    className={cn(
+      "text-xl font-serif font-semibold text-foreground tracking-tight",
+      className
+    )}
     {...props}
   />
 ));

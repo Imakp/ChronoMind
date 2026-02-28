@@ -4,6 +4,8 @@ import "./globals.css";
 import { auth } from "@/auth";
 import AuthSessionProvider from "@/components/providers/session-provider";
 import { ToastProvider } from "@/components/providers/toast-provider";
+import { InlineTagProvider } from "@/components/providers/inline-tag-provider";
+import { OnboardingProvider } from "@/components/providers/onboarding-provider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,8 +40,12 @@ export default async function RootLayout({
         className={`${inter.variable} ${lora.variable} ${mono.variable} font-sans antialiased bg-background text-foreground`}
       >
         <AuthSessionProvider session={session}>
-          {children}
-          <ToastProvider />
+          <OnboardingProvider>
+            <InlineTagProvider>
+              {children}
+              <ToastProvider />
+            </InlineTagProvider>
+          </OnboardingProvider>
         </AuthSessionProvider>
       </body>
     </html>

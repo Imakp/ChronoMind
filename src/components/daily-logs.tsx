@@ -40,6 +40,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Badge } from "./ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 import { cn } from "@/lib/utils";
+import { DailyLogsEmpty } from "./empty-states";
 
 interface DailyLogsProps {
   yearId: string;
@@ -48,7 +49,12 @@ interface DailyLogsProps {
   todayLog: DailyLog | null;
 }
 
-export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
+export function DailyLogs({
+  yearId,
+  year,
+  initialLogs,
+  todayLog,
+}: DailyLogsProps) {
   // State initialization remains the same...
   const [logs, setLogs] = useState<DailyLogMetadata[]>(() => {
     if (todayLog && !initialLogs.find((l) => l.id === todayLog.id)) {
@@ -201,12 +207,42 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
     .filter((l) => l.date && hasContent(l))
     .map((l) => new Date(l.date));
 
+  // Check if user has any content at all
+  const hasAnyContent = logs.some((log) => hasContent(log));
+
+  // Handle creating today's entry
+  const handleCreateTodayEntry = async () => {
+    const today = new Date();
+    setCurrentDate(today);
+
+    if (!selectedLog || !isSameDay(new Date(selectedLog.date), today)) {
+      setIsLoadingLog(true);
+      const result = await getOrCreateDailyLog(yearId, today);
+      if (result.success && result.data) {
+        setSelectedLog(result.data as DailyLogWithRelations);
+        const newMetadata: DailyLogMetadata = {
+          id: result.data.id,
+          date: result.data.date,
+          yearId: result.data.yearId,
+          hasContent: result.data.hasContent ?? false,
+          highlights: result.data.highlights || [],
+        };
+        setLogs((prev) => {
+          const existing = prev.find((l) => l.id === result.data!.id);
+          if (existing) return prev;
+          return [newMetadata, ...prev];
+        });
+      }
+      setIsLoadingLog(false);
+    }
+  };
+
   return (
-    <div className="space-y-8 max-w-5xl mx-auto pb-20">
+    <div className="space-y-12 max-w-7xl mx-auto pb-32">
       {/* 1. Header & Navigation */}
       <div
         className={cn(
-          "flex flex-col md:flex-row md:items-end justify-between gap-6 transition-all duration-700",
+          "flex flex-col md:flex-row md:items-end justify-between gap-8 transition-all duration-700",
           isFocused
             ? "opacity-10 blur-[2px] pointer-events-none grayscale"
             : "opacity-100"
@@ -237,7 +273,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
           {/* Week Strip */}
           <div className="hidden lg:flex bg-secondary/30 rounded-lg p-1 mr-2 border border-border/50">
             {weekDays.map((day) => {
@@ -274,7 +310,7 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
           </div>
 
           {/* Controls */}
-          <div className="flex items-center justify-between w-full sm:w-auto bg-card p-1 rounded-lg border border-border shadow-sm">
+          <div className="flex items-center justify-between w-full sm:w-auto bg-card p-2 rounded-lg border border-border shadow-sm">
             <Button
               variant="ghost"
               size="icon"
@@ -344,152 +380,162 @@ export function DailyLogs({ yearId, initialLogs, todayLog }: DailyLogsProps) {
         </div>
       </div>
 
-      <Separator />
+      {/* Whitespace separator instead of visible line */}
+      <div className="separator-whitespace" />
+
+      {/* Show empty state if no content exists */}
+      {!hasAnyContent && !isLoadingLog && (
+        <DailyLogsEmpty year={year} onCreateEntry={handleCreateTodayEntry} />
+      )}
 
       {/* 2. Content Area */}
-      <div className="min-h-[60vh] relative">
-        {isLoadingLog ? (
-          <div className="flex flex-col items-center justify-center h-64 gap-4">
-            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground animate-pulse">
-              Retrieving memory...
-            </p>
-          </div>
-        ) : isDateFuture ? (
-          <div className="absolute inset-0 z-10 flex items-start pt-20 justify-center">
-            <div className="text-center max-w-md p-8 border border-border bg-card/50 backdrop-blur-sm shadow-sm rounded-xl">
-              <div className="w-16 h-16 bg-secondary/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Clock className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h3 className="font-serif text-2xl font-medium mb-3">
-                You&apos;re ahead of time
-              </h3>
-              <p className="text-muted-foreground mb-8 leading-relaxed">
-                You can&apos;t log memories that haven&apos;t happened yet. Use
-                the Goals section to plan ahead, or wait for the future to
-                arrive.
+      {hasAnyContent && (
+        <div className="min-h-[60vh] relative">
+          {isLoadingLog ? (
+            <div className="flex flex-col items-center justify-center h-64 gap-4">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground/50" />
+              <p className="text-sm text-muted-foreground animate-pulse">
+                Retrieving memory...
               </p>
-              <Button onClick={jumpToToday} variant="outline">
-                Return to Today
-              </Button>
             </div>
-          </div>
-        ) : selectedLog ? (
-          <>
-            {/* ALERT for missing entries - Displayed above but part of the scroll/flow */}
-            {!currentLogHasContent && !isDateToday && (
-              <div
-                className={cn(
-                  "mb-6 transition-all duration-700",
-                  isFocused ? "opacity-10 blur-[2px] grayscale" : "opacity-100"
-                )}
-              >
-                <Alert className="bg-amber-50/50 border-amber-200/60 dark:bg-amber-950/10 dark:border-amber-900/30">
-                  <History className="h-4 w-4 text-amber-600/80" />
-                  <AlertTitle className="text-amber-800 dark:text-amber-500 font-medium">
-                    Missed Entry
-                  </AlertTitle>
-                  <AlertDescription className="text-amber-700/80 dark:text-amber-400/80 mt-1">
-                    You didn&apos;t log anything for{" "}
-                    {format(currentDate, "MMMM do")}. It&apos;s never too late
-                    to backfill a quick summary.
-                  </AlertDescription>
-                </Alert>
+          ) : isDateFuture ? (
+            <div className="absolute inset-0 z-10 flex items-start pt-20 justify-center">
+              <div className="text-center max-w-md p-8 border border-border bg-card/50 backdrop-blur-sm shadow-sm rounded-xl">
+                <div className="w-16 h-16 bg-secondary/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Clock className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-serif text-2xl font-medium mb-3">
+                  You&apos;re ahead of time
+                </h3>
+                <p className="text-muted-foreground mb-8 leading-relaxed">
+                  You can&apos;t log memories that haven&apos;t happened yet.
+                  Use the Goals section to plan ahead, or wait for the future to
+                  arrive.
+                </p>
+                <Button onClick={jumpToToday} variant="outline">
+                  Return to Today
+                </Button>
               </div>
-            )}
-
-            {/* UNIFIED ZEN MODE EDITOR (Used for Today and Past Days) */}
-            <div className="relative group perspective-1000">
-              {/* Header Dimmer Overlay */}
-              {isFocused && (
-                <div
-                  className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-10 animate-in fade-in duration-700"
-                  onClick={() => setIsFocused(false)}
-                />
-              )}
-
-              <div
-                className={cn(
-                  "transition-all duration-700 ease-out origin-center relative",
-                  isFocused
-                    ? "scale-[1.02] bg-background z-20 min-h-[70vh] py-12"
-                    : "scale-100",
-                  !isFocused &&
-                    "hover:bg-secondary/5 rounded-xl border border-transparent hover:border-border/40 p-4 -mx-4"
-                )}
-                onFocus={() => !isFocused && setIsFocused(true)}
-              >
-                {/* Saving Indicator */}
+            </div>
+          ) : selectedLog ? (
+            <>
+              {/* ALERT for missing entries - Displayed above but part of the scroll/flow */}
+              {!currentLogHasContent && !isDateToday && (
                 <div
                   className={cn(
-                    "flex items-center gap-2 text-xs text-muted-foreground transition-all duration-500 absolute top-0 right-0 p-4",
+                    "mb-6 transition-all duration-700",
                     isFocused
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100"
+                      ? "opacity-10 blur-[2px] grayscale"
+                      : "opacity-100"
                   )}
                 >
-                  {isSaving ? (
-                    <span className="flex items-center gap-1.5">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Saving...
-                    </span>
-                  ) : (
-                    <span className="opacity-0 group-hover:opacity-100 transition-opacity">
-                      Saved
-                    </span>
-                  )}
-                </div>
-
-                <div className="max-w-3xl mx-auto px-4 md:px-0">
-                  <div
-                    className={cn(
-                      "mb-8 text-center transition-all duration-700 delay-100",
-                      isFocused
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 -translate-y-4 hidden"
-                    )}
-                  >
-                    <p className="font-serif text-2xl text-foreground/80">
-                      {format(currentDate, "EEEE, MMMM do")}
-                    </p>
-                  </div>
-                  <EditorWithPersistence
-                    key={selectedLog.id}
-                    entityType="dailyLog"
-                    entityId={selectedLog.id}
-                    initialContent={
-                      (selectedLog.content as TiptapContent) || {
-                        type: "doc",
-                        content: [],
-                      }
-                    }
-                    highlights={selectedLog.highlights || []}
-                    onContentChange={handleContentChange}
-                    placeholder={
-                      !currentLogHasContent && !isDateToday
-                        ? "Backfill your memory... What happened on this day?"
-                        : "What's on your mind today? Highlight text to tag it..."
-                    }
-                    variant="minimal"
-                    className="prose-base md:prose-lg"
-                  />
-                </div>
-              </div>
-
-              {isFocused && (
-                <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
-                  <Button
-                    className="shadow-lg rounded-full px-6 h-12"
-                    onClick={() => setIsFocused(false)}
-                  >
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Done Writing
-                  </Button>
+                  <Alert className="bg-amber-50/50 border-amber-200/60 dark:bg-amber-950/10 dark:border-amber-900/30">
+                    <History className="h-4 w-4 text-amber-600/80" />
+                    <AlertTitle className="text-amber-800 dark:text-amber-500 font-medium">
+                      Missed Entry
+                    </AlertTitle>
+                    <AlertDescription className="text-amber-700/80 dark:text-amber-400/80 mt-1">
+                      You didn&apos;t log anything for{" "}
+                      {format(currentDate, "MMMM do")}. It&apos;s never too late
+                      to backfill a quick summary.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               )}
-            </div>
-          </>
-        ) : null}
-      </div>
+
+              {/* UNIFIED ZEN MODE EDITOR (Used for Today and Past Days) */}
+              <div className="relative group perspective-1000">
+                {/* Header Dimmer Overlay */}
+                {isFocused && (
+                  <div
+                    className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-10 animate-in fade-in duration-700"
+                    onClick={() => setIsFocused(false)}
+                  />
+                )}
+
+                <div
+                  className={cn(
+                    "transition-all duration-700 ease-out origin-center relative",
+                    isFocused
+                      ? "scale-[1.02] bg-background z-20 min-h-[70vh] py-12"
+                      : "scale-100",
+                    !isFocused &&
+                      "hover:bg-secondary/5 rounded-xl border border-transparent hover:border-border/40 p-4 -mx-4"
+                  )}
+                  onFocus={() => !isFocused && setIsFocused(true)}
+                >
+                  {/* Saving Indicator */}
+                  <div
+                    className={cn(
+                      "flex items-center gap-2 text-xs text-muted-foreground transition-all duration-500 absolute top-0 right-0 p-4",
+                      isFocused
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                    )}
+                  >
+                    {isSaving ? (
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Saving...
+                      </span>
+                    ) : (
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        Saved
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="max-w-3xl mx-auto px-4 md:px-0">
+                    <div
+                      className={cn(
+                        "mb-8 text-center transition-all duration-700 delay-100",
+                        isFocused
+                          ? "opacity-100 translate-y-0"
+                          : "opacity-0 -translate-y-4 hidden"
+                      )}
+                    >
+                      <p className="font-serif text-2xl text-foreground/80">
+                        {format(currentDate, "EEEE, MMMM do")}
+                      </p>
+                    </div>
+                    <EditorWithPersistence
+                      key={selectedLog.id}
+                      entityType="dailyLog"
+                      entityId={selectedLog.id}
+                      initialContent={
+                        (selectedLog.content as TiptapContent) || {
+                          type: "doc",
+                          content: [],
+                        }
+                      }
+                      highlights={selectedLog.highlights || []}
+                      onContentChange={handleContentChange}
+                      placeholder={
+                        !currentLogHasContent && !isDateToday
+                          ? "Backfill your memory... What happened on this day?"
+                          : "What's on your mind today? Highlight text to tag it..."
+                      }
+                      variant="minimal"
+                      className="prose-base md:prose-lg"
+                    />
+                  </div>
+                </div>
+
+                {isFocused && (
+                  <div className="fixed bottom-8 right-8 animate-in fade-in slide-in-from-bottom-4 duration-500 z-50">
+                    <Button
+                      className="shadow-lg rounded-full px-6 h-12"
+                      onClick={() => setIsFocused(false)}
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Done Writing
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

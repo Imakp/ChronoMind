@@ -1786,10 +1786,26 @@ export async function getTagsForYear(userId: string, year: number) {
             },
           },
         },
+        highlights: {
+          where: yearFilter,
+          orderBy: { createdAt: "desc" },
+          take: 1, // Get the most recent highlight for lastUsed
+          select: {
+            createdAt: true,
+          },
+        },
       },
     });
 
-    return { success: true, data: tags };
+    // Transform the data to include lastUsed
+    const tagsWithLastUsed = tags.map((tag) => ({
+      id: tag.id,
+      name: tag.name,
+      _count: tag._count,
+      lastUsed: tag.highlights[0]?.createdAt || null,
+    }));
+
+    return { success: true, data: tagsWithLastUsed };
   } catch (error) {
     console.error("Error fetching tags for year:", error);
     return { success: false, error: "Failed to fetch tags" };
